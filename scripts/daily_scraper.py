@@ -25,16 +25,20 @@ def extract_semantic_data(text_content):
     
     w_match = re.search(r'(?:Mass|Weight|Max takeoff weight)\s*[:\-]?\s*([\d\.,]+)\s*(t|tons|kg)', text_content, re.IGNORECASE)
     if w_match:
-        val = float(w_match.group(1).replace(',', ''))
-        data['weight'] = val if w_match.group(2).lower() != 'kg' else val / 1000.0
+        try:
+            val = float(w_match.group(1).replace(',', ''))
+            data['weight'] = val if w_match.group(2).lower() != 'kg' else val / 1000.0
+        except: pass
         
     rp_match = re.search(r'(?:Research|Train|Cost)\s*[:\-]?\s*([\d\.,]+)\s*(?:RP|Points)', text_content, re.IGNORECASE)
     if rp_match: 
-        data['rp'] = int(rp_match.group(1).replace(',', '').replace('.', ''))
+        try: data['rp'] = int(rp_match.group(1).replace(',', '').replace('.', ''))
+        except: pass
         
     sl_match = re.search(r'(?:Purchase|Price)\s*[:\-]?\s*([\d\.,]+)\s*(?:SL|Lions|Silver)', text_content, re.IGNORECASE)
     if sl_match: 
-        data['sl'] = int(sl_match.group(1).replace(',', '').replace('.', ''))
+        try: data['sl'] = int(sl_match.group(1).replace(',', '').replace('.', ''))
+        except: pass
         
     return data
 
@@ -78,11 +82,10 @@ def run_scraper(category_input):
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
         )
         
-        # مسدودسازی منابع سنگین برای بالاترین سرعت ممکن
+        # مسدودسازی دانلود مدیا برای سرعت بالا (تگ‌های img در DOM باقی می‌مانند)
         context.route("**/*", lambda route: route.abort() if route.request.resource_type in ["image", "media", "font"] else route.continue_())
         
         page = context.new_page()
-        
         print(f"Loading main category page: {target_url}")
         page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
         
@@ -92,12 +95,7 @@ def run_scraper(category_input):
                         .filter(href => href && href.includes('/unit/'));
         }""")
         
-        urls = set()
-        for href in urls_list:
-            full_url = f"https://wiki.warthunder.com{href}" if href.startswith("/") else href
-            urls.add(full_url)
-        urls = list(urls)
-        
+        urls = list({f"https://wiki.warthunder.com{href}" if href.startswith("/") else href for href in urls_list})
         print(f"✅ Found {len(urls)} EXACT vehicle links (/unit/ format).")
 
         if len(urls) == 0:
@@ -112,13 +110,16 @@ def run_scraper(category_input):
                 
                 page.goto(url, wait_until="domcontentloaded", timeout=20000)
                 
-                # استخراج اطلاعات جامع + دسته‌بندی‌های سایت برای تشخیص دقیق کشور
                 page_data = page.evaluate("""() => {
                     const h1 = document.querySelector('h1');
                     const brEl = document.querySelector('.specs_card_br, .br-value');
                     
                     let imageUrl = null;
                     const imgs = Array.from(document.querySelectorAll('img'));
+                    
+                    // استخراج آدرس اصلی تمام تصاویر صفحه برای پیدا کردن پرچم‌ها
+                    const imgSources = imgs.map(img => img.getAttribute('src') || '');
+                    
                     for (let img of imgs) {
                         const w = img.getAttribute('width');
                         const src = img.getAttribute('src');
@@ -128,15 +129,13 @@ def run_scraper(category_input):
                         }
                     }
                     
-                    const catLinks = Array.from(document.querySelectorAll('.mw-normal-catlinks a, #mw-normal-catlinks a')).map(a => a.innerText.toLowerCase());
-                    
                     return {
                         name: h1 ? h1.innerText.trim() : '',
                         title: document.title,
                         bodyText: document.body.innerText,
                         brText: brEl ? brEl.innerText : '',
                         image_url: imageUrl,
-                        categories: catLinks
+                        imgSources: imgSources
                     };
                 }""")
                 
@@ -146,10 +145,9 @@ def run_scraper(category_input):
                 
                 name = page_data['name']
                 if not name or "War Thunder Wiki" in name:
-                    name_from_url = slug.replace("_", " ").title()
                     name = page_data['title'].replace(" - War Thunder Wiki", "").strip()
                     if not name or "War Thunder Wiki" in name: 
-                        name = name_from_url
+                        name = slug.replace("_", " ").title()
                 
                 rank_match = re.search(r'Rank\s*([IVX]+|\d+)', text_content, re.IGNORECASE)
                 rank = rank_match.group(1) if rank_match else None
@@ -158,49 +156,71 @@ def run_scraper(category_input):
                     rank = roman_map.get(rank.upper(), None)
 
                 # ==========================================
-                # سیستم هوشمند سه‌لایه برای استخراج کشور
+                # موتور قدرتمند تشخیص کشور (مبتنی بر المان‌های بصری و متنی)
                 # ==========================================
                 nation = "unknown"
                 
-                # لایه ۱: چک کردن پیشوندهای کلاسیک (بیشتر برای تانک‌ها)
-                nation_prefixes = {
-                    'us_': 'usa', 'germ_': 'germany', 'ussr_': 'ussr', 'uk_': 'britain',
-                    'jp_': 'japan', 'cn_': 'china', 'it_': 'italy', 'fr_': 'france',
-                    'sw_': 'sweden', 'il_': 'israel'
+                # لایه طلایی ۱: استخراج کشور از اسم فایلِ پرچم و درخت تکنولوژی 
+                flag_map = {
+                    'united_states': 'usa', 'usa': 'usa',
+                    'soviet_union': 'ussr', 'ussr': 'ussr', 'russia': 'ussr',
+                    'united_kingdom': 'britain', 'britain': 'britain', 'uk': 'britain',
+                    'germany': 'germany',
+                    'japan': 'japan',
+                    'china': 'china',
+                    'italy': 'italy',
+                    'france': 'france',
+                    'sweden': 'sweden',
+                    'israel': 'israel'
                 }
-                for prefix, nat in nation_prefixes.items():
-                    if slug.startswith(prefix) or f"_{prefix}" in slug:
-                        nation = nat
+                
+                for src in page_data.get('imgSources', []):
+                    src_lower = src.lower()
+                    if 'flag' in src_lower or 'tree' in src_lower:
+                        for key, nat in flag_map.items():
+                            if f"_{key}" in src_lower or f"{key}_" in src_lower or f"/{key}." in src_lower:
+                                nation = nat
+                                break
+                    if nation != "unknown":
                         break
                 
-                # لایه ۲: چک کردن وجود نام کامل کشور در اسلاگ (مثل ah_64e_china)
-                nations_list = ['usa', 'germany', 'ussr', 'britain', 'japan', 'china', 'italy', 'france', 'sweden', 'israel']
+                # لایه پشتیبان ۲: اسکن صفت‌های ملیتی در متن معرفی (آمریکایی، روسی و ...)
                 if nation == "unknown":
-                    for nat in nations_list:
-                        if f"_{nat}" in slug or slug.endswith(nat):
+                    clean_intro = re.sub(r'[^\w\s]', ' ', text_content[:2000].lower())
+                    adjectives_map = {
+                        ' american ': 'usa',
+                        ' soviet ': 'ussr', ' russian ': 'ussr',
+                        ' british ': 'britain',
+                        ' german ': 'germany',
+                        ' japanese ': 'japan',
+                        ' chinese ': 'china',
+                        ' italian ': 'italy',
+                        ' french ': 'france',
+                        ' swedish ': 'sweden',
+                        ' israeli ': 'israel'
+                    }
+                    for adj, nat in adjectives_map.items():
+                        if adj in clean_intro:
                             nation = nat
                             break
 
-                # لایه ۳ (تیر خلاص): چک کردن دسته‌بندی‌های رسمی خود ویکی وار تاندر
+                # لایه پشتیبان ۳: اسکن مستقیم پارامترهای اطلاعات (Country of Origin)
                 if nation == "unknown":
-                    cat_map = {
-                        'usa': 'usa', 'united states': 'usa',
-                        'germany': 'germany',
-                        'ussr': 'ussr', 'soviet': 'ussr', 'russia': 'ussr',
-                        'britain': 'britain', 'great britain': 'britain',
-                        'japan': 'japan',
-                        'china': 'china',
-                        'italy': 'italy',
-                        'france': 'france',
-                        'sweden': 'sweden',
-                        'israel': 'israel'
+                    nation_match = re.search(r'(?:Country of origin|Nation)\s*[:\n\-]?\s*(USA|Germany|USSR|Britain|Great Britain|Japan|China|Italy|France|Sweden|Israel)', text_content, re.IGNORECASE)
+                    if nation_match:
+                        n_str = nation_match.group(1).lower()
+                        nation = 'britain' if n_str == 'great britain' else n_str
+
+                # لایه پشتیبان ۴: پیشوندها و پسوندهای اسلاگ
+                if nation == "unknown":
+                    nation_prefixes = {
+                        'us_': 'usa', 'germ_': 'germany', 'ussr_': 'ussr', 'uk_': 'britain',
+                        'jp_': 'japan', 'cn_': 'china', 'it_': 'italy', 'fr_': 'france',
+                        'sw_': 'sweden', 'il_': 'israel', '_iaf': 'israel'
                     }
-                    for cat in page_data.get('categories', []):
-                        for key, nat in cat_map.items():
-                            if key in cat:
-                                nation = nat
-                                break
-                        if nation != "unknown":
+                    for prefix, nat in nation_prefixes.items():
+                        if slug.startswith(prefix) or f"_{prefix}" in slug or slug.endswith(prefix):
+                            nation = nat
                             break
                 
                 semantic_data = extract_semantic_data(text_content)
@@ -220,11 +240,9 @@ def run_scraper(category_input):
                     "source_url": url
                 }
 
-                # ذخیره در دیتابیس
                 supabase.table("vehicles").upsert(vehicle_data, on_conflict="id").execute()
                 saved_count += 1
                 
-                # با فاصله‌ی خالی، خط قبلی (Analyzing...) را به طور کامل پاک می‌کنیم تا لاگ تمیز بماند
                 sys.stdout.write(f"\r{' ' * 60}\r")
                 print(f"✅ Saved [{nation.upper()}]: {name}")
 
