@@ -16,19 +16,24 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+
       - name: Install dependencies
         run: pip install -r scripts/requirements-daily-scraper.txt
+
       - name: Install Playwright
         run: playwright install --with-deps chromium
+
       - name: Run Fleet scraper
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python3 scripts/daily_scraper.py --category fleet
+
       - name: Trigger Revalidation
         if: success()
         env:
@@ -41,6 +46,7 @@ jobs:
           curl -s -X POST "$REVALIDATE_URL" \
             -H "Content-Type: application/json" \
             -d '{"secret": "'"$REVALIDATE_SECRET"'"}' || true
+
       - name: Log failure
         if: failure()
         uses: actions/upload-artifact@v4
