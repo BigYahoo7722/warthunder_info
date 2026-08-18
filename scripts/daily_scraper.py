@@ -100,11 +100,16 @@ def run_scraper(category_name):
         for idx, url in enumerate(urls, 1):
             try:
                 print(f"[{idx}/{len(urls)}] Analyzing: {url}")
-                page.goto(url, wait_until="networkidle", timeout=30000)
+                # تغییر به domcontentloaded برای جلوگیری از گیر کردن و افزایش سرعت
+                page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                try:
+                    page.wait_for_timeout(1000)
+                except:
+                    pass
                 
                 text_content = page.inner_text("body")
                 
-                # اصلاح شده: استخراج نام واقعی از تیتر اصلی صفحه (h1) با پشتیبانی از فال‌بک
+                # استخراج نام واقعی از تیتر اصلی صفحه (h1) با پشتیبانی از فال‌بک
                 name = ""
                 try:
                     name = page.locator("h1").first.inner_text().strip()
@@ -168,7 +173,7 @@ def run_scraper(category_name):
                 saved_count += 1
                 print(f"    ✓ Saved: {name}")
                 
-                time.sleep(1)
+                time.sleep(0.5)
 
             except Exception as e:
                 print(f"⚠️ Error on {url}: {e}")
