@@ -1,9 +1,8 @@
 import os
 import sys
 import re
-import time
 import argparse
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
 from supabase import create_client, Client
 
 # ==========================================
@@ -13,7 +12,7 @@ SUPABASE_URL = os.environ.get("SUPABASE_URL")
 SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
-    print("Error: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing.")
+    print("❌ Error: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing.")
     sys.exit(1)
 
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
@@ -39,13 +38,11 @@ def extract_semantic_data(text_content):
         
     return data
 
-def extract_br_smart(page, text_content):
-    try:
-        br_text = page.locator(".specs_card_br, .br-value").inner_text(timeout=1000)
+def extract_br_smart(br_text, text_content):
+    if br_text:
         matches = re.findall(r'\d+\.\d+|\d+', br_text)
         if len(matches) >= 3: return float(matches[0]), float(matches[1]), float(matches[2])
         elif len(matches) >= 1: return float(matches[0]), float(matches[0]), float(matches[0])
-    except: pass
     
     matches = re.findall(r'Battle Rating\s*[:\-]?\s*(\d+\.\d+|\d+)', text_content, re.IGNORECASE)
     if matches:
@@ -54,13 +51,12 @@ def extract_br_smart(page, text_content):
     return None, None, None
 
 # ==========================================
-# ۳. خزنده اصلی (اصلاح‌شده و ایمن)
+# ۳. خزنده اصلی (سریع، بهینه‌شده و بدون هنگ)
 # ==========================================
 def run_scraper(category_input):
     cat_lower = category_input.lower()
-    print(f"\n--- Starting Next-Gen Scraper for: {cat_lower} ---")
+    print(f"\n--- Starting Next-Gen TURBO Scraper for: {cat_lower} ---")
     
-    # اصلاح آدرس‌ها (حروف کوچک و اضافه شدن fleet + نگاشت درست army به ground)
     category_fallbacks = {
         'army': 'https://wiki.warthunder.com/ground',
         'ground': 'https://wiki.warthunder.com/ground',
@@ -74,7 +70,6 @@ def run_scraper(category_input):
         sys.exit(1)
         
     target_url = category_fallbacks[cat_lower]
-    # نام واقعی کتگوری برای ذخیره در دیتابیس (تبدیل army به ground برای سازگاری)
     db_category = 'ground' if cat_lower == 'army' else cat_lower
 
     with sync_playwright() as p:
@@ -82,23 +77,28 @@ def run_scraper(category_input):
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
         )
+        
+        # 🚀 سرعت بخشیدن شدید به لود صفحات با مسدود کردن عکس‌ها و فونت‌ها (فقط دیتای متنی و HTML دانلود می‌شود)
+        context.route("**/*", lambda route: route.abort() if route.request.resource_type in ["image", "media", "font"] else route.continue_())
+        
         page = context.new_page()
         
         print(f"Loading main category page: {target_url}")
         page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
-        try: page.wait_for_timeout(2000)
-        except: pass
         
-        raw_links = page.locator("a").all()
+        # استخراج آنی لینک‌ها با جاوااسکریپت (بسیار سریع‌تر از حلقه پایتون)
+        urls_list = page.evaluate("""() => {
+            return Array.from(document.querySelectorAll('a'))
+                        .map(a => a.getAttribute('href'))
+                        .filter(href => href && href.includes('/unit/'));
+        }""")
+        
         urls = set()
-        
-        for link in raw_links:
-            href = link.get_attribute("href")
-            if href and "/unit/" in href:
-                full_url = f"https://wiki.warthunder.com{href}" if href.startswith("/") else href
-                urls.add(full_url)
-        
+        for href in urls_list:
+            full_url = f"https://wiki.warthunder.com{href}" if href.startswith("/") else href
+            urls.add(full_url)
         urls = list(urls)
+        
         print(f"✅ Found {len(urls)} EXACT vehicle links (/unit/ format).")
 
         if len(urls) == 0:
@@ -108,49 +108,59 @@ def run_scraper(category_input):
         saved_count = 0
         for idx, url in enumerate(urls, 1):
             try:
-                print(f"[{idx}/{len(urls)}] Analyzing: {url}")
-                page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                try: page.wait_for_timeout(1000)
-                except: pass
+                # لاگ را در یک خط نگه می‌داریم تا کنسول شلوغ نشود
+                sys.stdout.write(f"\r[{idx}/{len(urls)}] Analyzing: {url.split('/')[-1]}... ")
+                sys.stdout.flush()
                 
-                text_content = page.inner_text("body")
+                page.goto(url, wait_until="domcontentloaded", timeout=20000)
                 
-                # استخراج شناسهتاپ (id) از روی اسلاگ URL (Primary Key جدول)
+                # استخراج تمام اطلاعات نیازمند DOM به صورت یکجا و آنی در مرورگر
+                # این کار جلوی خطای Timeout سی‌ثانیه‌ای locator ها را کاملاً می‌گیرد
+                page_data = page.evaluate("""() => {
+                    const h1 = document.querySelector('h1');
+                    const brEl = document.querySelector('.specs_card_br, .br-value');
+                    
+                    let imageUrl = null;
+                    const imgs = Array.from(document.querySelectorAll('img'));
+                    for (let img of imgs) {
+                        const w = img.getAttribute('width');
+                        const src = img.getAttribute('src');
+                        if (w && parseInt(w) >= 200 && src && !src.toLowerCase().includes('icon')) {
+                            imageUrl = src.startsWith('/') ? 'https://wiki.warthunder.com' + src : src;
+                            break;
+                        }
+                    }
+                    
+                    return {
+                        name: h1 ? h1.innerText.trim() : '',
+                        title: document.title,
+                        bodyText: document.body.innerText,
+                        brText: brEl ? brEl.innerText : '',
+                        image_url: imageUrl
+                    };
+                }""")
+                
+                text_content = page_data['bodyText']
                 slug = url.split("/")[-1].lower()
                 vehicle_id = slug
                 
-                # استخراج نام واقعی از تیتر اصلی صفحه (h1)
-                name = ""
-                try:
-                    name = page.locator("h1").first.inner_text().strip()
-                except:
-                    pass
-                
+                name = page_data['name']
                 if not name or "War Thunder Wiki" in name:
                     name_from_url = slug.replace("_", " ").title()
-                    name = page.title().replace(" - War Thunder Wiki", "").strip()
+                    name = page_data['title'].replace(" - War Thunder Wiki", "").strip()
                     if not name or "War Thunder Wiki" in name: 
                         name = name_from_url
                 
-                # استخراج رنک
                 rank_match = re.search(r'Rank\s*([IVX]+|\d+)', text_content, re.IGNORECASE)
                 rank = rank_match.group(1) if rank_match else None
                 if rank and not str(rank).isdigit():
                     roman_map = {'I':1, 'II':2, 'III':3, 'IV':4, 'V':5, 'VI':6, 'VII':7, 'VIII':8, 'IX':9}
                     rank = roman_map.get(rank.upper(), None)
 
-                # اصلاح تشخیص کشور بر اساس پیشوندهای واقعی URL
                 nation_prefixes = {
-                    'us_': 'usa',
-                    'germ_': 'germany',
-                    'ussr_': 'ussr',
-                    'uk_': 'britain',
-                    'jp_': 'japan',
-                    'cn_': 'china',
-                    'it_': 'italy',
-                    'fr_': 'france',
-                    'sw_': 'sweden',
-                    'il_': 'israel'
+                    'us_': 'usa', 'germ_': 'germany', 'ussr_': 'ussr', 'uk_': 'britain',
+                    'jp_': 'japan', 'cn_': 'china', 'it_': 'italy', 'fr_': 'france',
+                    'sw_': 'sweden', 'il_': 'israel'
                 }
                 nation = "unknown"
                 for prefix, nat in nation_prefixes.items():
@@ -159,22 +169,8 @@ def run_scraper(category_input):
                         break
                 
                 semantic_data = extract_semantic_data(text_content)
-                br_ab, br_rb, br_sb = extract_br_smart(page, text_content)
-                
-                # استخراج تصویر
-                image_url = None
-                try:
-                    images = page.locator("img").all()
-                    for img in images:
-                        w = img.get_attribute("width")
-                        if w and int(w) >= 200:
-                            src = img.get_attribute("src")
-                            if src and "icon" not in src.lower():
-                                image_url = f"https://wiki.warthunder.com{src}" if src.startswith("/") else src
-                                break
-                except: pass
+                br_ab, br_rb, br_sb = extract_br_smart(page_data['brText'], text_content)
 
-                # اصلاح کلید category و اضافه کردن id الزامی برای جدول Supabase
                 vehicle_data = {
                     "id": vehicle_id,
                     "name": name, 
@@ -185,26 +181,26 @@ def run_scraper(category_input):
                     "weight_tons": semantic_data['weight'], 
                     "research_cost_rp": semantic_data['rp'],
                     "purchase_cost_sl": semantic_data['sl'], 
-                    "image_url": image_url,
+                    "image_url": page_data['image_url'],
                     "source_url": url
                 }
 
-                # ذخیره در دیتابیس با تکیه بر id به عنوان کلید منحصر‌به‌فرد
+                # ذخیره در دیتابیس
                 supabase.table("vehicles").upsert(vehicle_data, on_conflict="id").execute()
                 saved_count += 1
-                print(f"    ✓ Saved [{nation.upper()}]: {name}")
-                
-                time.sleep(0.5)
+                print(f"✅ Saved [{nation.upper()}]")
 
+            except PlaywrightTimeoutError:
+                print(f"⚠️ Timeout (skipped)")
+                continue
             except Exception as e:
-                print(f"⚠️ Error on {url}: {e}")
+                print(f"⚠️ Error: {str(e)[:50]}")
                 continue
 
         browser.close()
         
-        # مدیریت خطای هوشمند: اگر حتی یک رکورد هم ذخیره نشود، اکشن فیل می‌شود تا متوجه شویم
         if saved_count == 0:
-            print("❌ CRITICAL ERROR: 0 vehicles were saved successfully.")
+            print("\n❌ CRITICAL ERROR: 0 vehicles were saved successfully.")
             sys.exit(1)
             
         print(f"\n🎉 OPERATION COMPLETE: {saved_count} vehicles perfectly integrated.")
