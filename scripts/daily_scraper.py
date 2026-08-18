@@ -51,7 +51,7 @@ def extract_br_smart(br_text, text_content):
     return None, None, None
 
 # ==========================================
-# ۳. خزنده اصلی (سریع، بهینه‌شده و بدون هنگ)
+# ۳. خزنده اصلی (TURBO)
 # ==========================================
 def run_scraper(category_input):
     cat_lower = category_input.lower()
@@ -78,7 +78,7 @@ def run_scraper(category_input):
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
         )
         
-        # 🚀 سرعت بخشیدن شدید به لود صفحات با مسدود کردن عکس‌ها و فونت‌ها (فقط دیتای متنی و HTML دانلود می‌شود)
+        # مسدودسازی منابع سنگین برای بالاترین سرعت ممکن
         context.route("**/*", lambda route: route.abort() if route.request.resource_type in ["image", "media", "font"] else route.continue_())
         
         page = context.new_page()
@@ -86,7 +86,6 @@ def run_scraper(category_input):
         print(f"Loading main category page: {target_url}")
         page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
         
-        # استخراج آنی لینک‌ها با جاوااسکریپت (بسیار سریع‌تر از حلقه پایتون)
         urls_list = page.evaluate("""() => {
             return Array.from(document.querySelectorAll('a'))
                         .map(a => a.getAttribute('href'))
@@ -108,14 +107,12 @@ def run_scraper(category_input):
         saved_count = 0
         for idx, url in enumerate(urls, 1):
             try:
-                # لاگ را در یک خط نگه می‌داریم تا کنسول شلوغ نشود
                 sys.stdout.write(f"\r[{idx}/{len(urls)}] Analyzing: {url.split('/')[-1]}... ")
                 sys.stdout.flush()
                 
                 page.goto(url, wait_until="domcontentloaded", timeout=20000)
                 
-                # استخراج تمام اطلاعات نیازمند DOM به صورت یکجا و آنی در مرورگر
-                # این کار جلوی خطای Timeout سی‌ثانیه‌ای locator ها را کاملاً می‌گیرد
+                # استخراج اطلاعات جامع + دسته‌بندی‌های سایت برای تشخیص دقیق کشور
                 page_data = page.evaluate("""() => {
                     const h1 = document.querySelector('h1');
                     const brEl = document.querySelector('.specs_card_br, .br-value');
@@ -131,12 +128,15 @@ def run_scraper(category_input):
                         }
                     }
                     
+                    const catLinks = Array.from(document.querySelectorAll('.mw-normal-catlinks a, #mw-normal-catlinks a')).map(a => a.innerText.toLowerCase());
+                    
                     return {
                         name: h1 ? h1.innerText.trim() : '',
                         title: document.title,
                         bodyText: document.body.innerText,
                         brText: brEl ? brEl.innerText : '',
-                        image_url: imageUrl
+                        image_url: imageUrl,
+                        categories: catLinks
                     };
                 }""")
                 
@@ -157,16 +157,51 @@ def run_scraper(category_input):
                     roman_map = {'I':1, 'II':2, 'III':3, 'IV':4, 'V':5, 'VI':6, 'VII':7, 'VIII':8, 'IX':9}
                     rank = roman_map.get(rank.upper(), None)
 
+                # ==========================================
+                # سیستم هوشمند سه‌لایه برای استخراج کشور
+                # ==========================================
+                nation = "unknown"
+                
+                # لایه ۱: چک کردن پیشوندهای کلاسیک (بیشتر برای تانک‌ها)
                 nation_prefixes = {
                     'us_': 'usa', 'germ_': 'germany', 'ussr_': 'ussr', 'uk_': 'britain',
                     'jp_': 'japan', 'cn_': 'china', 'it_': 'italy', 'fr_': 'france',
                     'sw_': 'sweden', 'il_': 'israel'
                 }
-                nation = "unknown"
                 for prefix, nat in nation_prefixes.items():
                     if slug.startswith(prefix) or f"_{prefix}" in slug:
                         nation = nat
                         break
+                
+                # لایه ۲: چک کردن وجود نام کامل کشور در اسلاگ (مثل ah_64e_china)
+                nations_list = ['usa', 'germany', 'ussr', 'britain', 'japan', 'china', 'italy', 'france', 'sweden', 'israel']
+                if nation == "unknown":
+                    for nat in nations_list:
+                        if f"_{nat}" in slug or slug.endswith(nat):
+                            nation = nat
+                            break
+
+                # لایه ۳ (تیر خلاص): چک کردن دسته‌بندی‌های رسمی خود ویکی وار تاندر
+                if nation == "unknown":
+                    cat_map = {
+                        'usa': 'usa', 'united states': 'usa',
+                        'germany': 'germany',
+                        'ussr': 'ussr', 'soviet': 'ussr', 'russia': 'ussr',
+                        'britain': 'britain', 'great britain': 'britain',
+                        'japan': 'japan',
+                        'china': 'china',
+                        'italy': 'italy',
+                        'france': 'france',
+                        'sweden': 'sweden',
+                        'israel': 'israel'
+                    }
+                    for cat in page_data.get('categories', []):
+                        for key, nat in cat_map.items():
+                            if key in cat:
+                                nation = nat
+                                break
+                        if nation != "unknown":
+                            break
                 
                 semantic_data = extract_semantic_data(text_content)
                 br_ab, br_rb, br_sb = extract_br_smart(page_data['brText'], text_content)
@@ -188,13 +223,18 @@ def run_scraper(category_input):
                 # ذخیره در دیتابیس
                 supabase.table("vehicles").upsert(vehicle_data, on_conflict="id").execute()
                 saved_count += 1
-                print(f"✅ Saved [{nation.upper()}]")
+                
+                # با فاصله‌ی خالی، خط قبلی (Analyzing...) را به طور کامل پاک می‌کنیم تا لاگ تمیز بماند
+                sys.stdout.write(f"\r{' ' * 60}\r")
+                print(f"✅ Saved [{nation.upper()}]: {name}")
 
             except PlaywrightTimeoutError:
-                print(f"⚠️ Timeout (skipped)")
+                sys.stdout.write(f"\r{' ' * 60}\r")
+                print(f"⚠️ Timeout (skipped): {url.split('/')[-1]}")
                 continue
             except Exception as e:
-                print(f"⚠️ Error: {str(e)[:50]}")
+                sys.stdout.write(f"\r{' ' * 60}\r")
+                print(f"⚠️ Error on {url.split('/')[-1]}: {str(e)[:50]}")
                 continue
 
         browser.close()
