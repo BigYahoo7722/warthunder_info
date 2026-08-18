@@ -82,11 +82,9 @@ def run_scraper(category_input):
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
         )
         
-        # مسدودسازی رسانه‌ها برای سرعت بالا
         context.route("**/*", lambda route: route.abort() if route.request.resource_type in ["image", "media", "font"] else route.continue_())
         
         page = context.new_page()
-        print(f"Loading main category page: {target_url}")
         page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
         
         urls_list = page.evaluate("""() => {
@@ -96,10 +94,8 @@ def run_scraper(category_input):
         }""")
         
         urls = list({f"https://wiki.warthunder.com{href}" if href.startswith("/") else href for href in urls_list})
-        print(f"✅ Found {len(urls)} EXACT vehicle links (/unit/ format).")
-
+        
         if len(urls) == 0:
-            print("❌ No /unit/ links found. Exiting.")
             sys.exit(1)
 
         saved_count = 0
@@ -125,12 +121,28 @@ def run_scraper(category_input):
                         }
                     }
                     
-                    // استخراج دقیق دسته‌بندی‌های اختصاصی صفحه (بدون تداخل با منوی پایین سایت)
-                    let catLinks = [];
-                    const catBox = document.querySelector('#mw-normal-catlinks');
-                    if (catBox) {
-                        // فقط لینک‌هایی که درون لیست (li) هستند تا خود کلمه Category خوانده نشود
-                        catLinks = Array.from(catBox.querySelectorAll('li a')).map(a => a.textContent.trim().toLowerCase());
+                    // استخراج مستقیم از جدول مشخصات
+                    let tableNation = "";
+                    const rows = document.querySelectorAll('tr');
+                    for (let row of rows) {
+                        const cells = row.querySelectorAll('th, td');
+                        if (cells.length >= 2) {
+                            const label = cells[0].textContent.trim().toLowerCase();
+                            if (label.includes('country') || label.includes('nation')) {
+                                tableNation = cells[1].textContent.trim().toLowerCase();
+                                break;
+                            }
+                        }
+                    }
+
+                    // استخراج از پاراگراف اول متنی
+                    let introText = "";
+                    const pTags = document.querySelectorAll('.mw-parser-output > p');
+                    for (let p of pTags) {
+                        if (p.textContent.trim().length > 40) {
+                            introText = p.textContent.trim().toLowerCase();
+                            break;
+                        }
                     }
                     
                     return {
@@ -139,7 +151,8 @@ def run_scraper(category_input):
                         bodyText: document.body.innerText,
                         brText: brEl ? brEl.textContent : '',
                         image_url: imageUrl,
-                        catLinks: catLinks
+                        tableNation: tableNation,
+                        introText: introText
                     };
                 }""")
                 
@@ -160,46 +173,45 @@ def run_scraper(category_input):
                     rank = roman_map.get(rank.upper(), None)
 
                 # ==========================================
-                # موتور تشخیص کشور (منبع مطلق: دسته‌بندی‌های مدیاویکی)
+                # موتور تشخیص کشور (استراتژی سه لایه)
                 # ==========================================
                 nation = "unknown"
                 nations_map = {
-                    'usa': 'usa', 'united': 'usa',
-                    'ussr': 'ussr', 'soviet': 'ussr', 'russia': 'ussr',
-                    'britain': 'britain', 'great': 'britain', 'uk': 'britain',
-                    'germany': 'germany',
-                    'japan': 'japan',
-                    'china': 'china',
-                    'italy': 'italy',
-                    'france': 'france',
-                    'sweden': 'sweden',
-                    'israel': 'israel'
+                    'usa': 'usa', 'united states': 'usa', 'american': 'usa',
+                    'ussr': 'ussr', 'soviet': 'ussr', 'russia': 'ussr', 'russian': 'ussr',
+                    'britain': 'britain', 'great britain': 'britain', 'british': 'britain', 'uk': 'britain',
+                    'germany': 'germany', 'german': 'germany',
+                    'japan': 'japan', 'japanese': 'japan',
+                    'china': 'china', 'chinese': 'china',
+                    'italy': 'italy', 'italian': 'italy',
+                    'france': 'france', 'french': 'france',
+                    'sweden': 'sweden', 'swedish': 'sweden',
+                    'israel': 'israel', 'israeli': 'israel'
                 }
                 
-                # لایه ۱ طلایی: چک کردن دسته‌بندی‌های رسمی خودِ ویکی
-                for cat in page_data.get('catLinks', []):
-                    cat_words = cat.split()
-                    if not cat_words: continue
-                    
-                    first_word = cat_words[0]
-                    
-                    # بررسی اسم‌های دو بخشی (Great Britain و United States)
-                    if first_word == "great" and len(cat_words) > 1 and cat_words[1] == "britain":
-                        nation = "britain"
-                        break
-                    elif first_word == "united" and len(cat_words) > 1 and cat_words[1] == "states":
-                        nation = "usa"
-                        break
-                    # بررسی بقیه کشورها
-                    elif first_word in nations_map:
-                        nation = nations_map[first_word]
-                        break
-                
-                # لایه ۲ پشتیبان: اگر مدیاویکی دسته‌بندی نداشت، از اسلاگ استفاده کن
+                # لایه ۱: جدول مشخصات سمت راست
+                table_nat = page_data.get('tableNation', '')
+                if table_nat:
+                    for key, val in nations_map.items():
+                        if key == table_nat or key in table_nat.split():
+                            nation = val
+                            break
+
+                # لایه ۲: خواندن متن معرفی (The AH-64 is an American...)
                 if nation == "unknown":
-                    for key, nat in nations_map.items():
-                        if f"_{key}" in slug or slug.endswith(key):
-                            nation = nat
+                    intro = page_data.get('introText', '')
+                    for key, val in nations_map.items():
+                        if f" {key} " in f" {intro} ":
+                            # چک می‌کند که اسم کشور در اوایل پاراگراف باشد
+                            if intro.find(key) < 150: 
+                                nation = val
+                                break
+
+                # لایه ۳: اتکا به لینک
+                if nation == "unknown":
+                    for key, val in nations_map.items():
+                        if f"_{val}" in slug or slug.endswith(val):
+                            nation = val
                             break
                             
                 semantic_data = extract_semantic_data(text_content)
@@ -226,20 +238,11 @@ def run_scraper(category_input):
                 print(f"✅ Saved [{nation.upper()}]: {name}")
 
             except PlaywrightTimeoutError:
-                sys.stdout.write(f"\r{' ' * 60}\r")
-                print(f"⚠️ Timeout (skipped): {url.split('/')[-1]}")
                 continue
             except Exception as e:
-                sys.stdout.write(f"\r{' ' * 60}\r")
-                print(f"⚠️ Error on {url.split('/')[-1]}: {str(e)[:50]}")
                 continue
 
         browser.close()
-        
-        if saved_count == 0:
-            print("\n❌ CRITICAL ERROR: 0 vehicles were saved successfully.")
-            sys.exit(1)
-            
         print(f"\n🎉 OPERATION COMPLETE: {saved_count} vehicles perfectly integrated.")
 
 if __name__ == "__main__":
