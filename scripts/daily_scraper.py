@@ -54,18 +54,28 @@ def extract_br_smart(page, text_content):
     return None, None, None
 
 # ==========================================
-# ۳. خزنده اصلی (هماهنگ با ساختار جدید /unit/)
+# ۳. خزنده اصلی (اصلاح‌شده و ایمن)
 # ==========================================
-def run_scraper(category_name):
-    print(f"\n--- Starting Next-Gen Scraper for: {category_name} ---")
+def run_scraper(category_input):
+    cat_lower = category_input.lower()
+    print(f"\n--- Starting Next-Gen Scraper for: {cat_lower} ---")
     
-    # آدرس اصلی دسته‌بندی‌ها
+    # اصلاح آدرس‌ها (حروف کوچک و اضافه شدن fleet + نگاشت درست army به ground)
     category_fallbacks = {
-        'helicopters': 'https://wiki.warthunder.com/Helicopters',
-        'aviation': 'https://wiki.warthunder.com/Aviation',
-        'ground': 'https://wiki.warthunder.com/Ground_vehicles'
+        'army': 'https://wiki.warthunder.com/ground',
+        'ground': 'https://wiki.warthunder.com/ground',
+        'aviation': 'https://wiki.warthunder.com/aviation',
+        'fleet': 'https://wiki.warthunder.com/fleet',
+        'helicopters': 'https://wiki.warthunder.com/helicopters'
     }
-    target_url = category_fallbacks.get(category_name.lower(), category_fallbacks['helicopters'])
+    
+    if cat_lower not in category_fallbacks:
+        print(f"❌ Error: Invalid category '{category_input}'. Choose from {list(category_fallbacks.keys())}")
+        sys.exit(1)
+        
+    target_url = category_fallbacks[cat_lower]
+    # نام واقعی کتگوری برای ذخیره در دیتابیس (تبدیل army به ground برای سازگاری)
+    db_category = 'ground' if cat_lower == 'army' else cat_lower
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -74,10 +84,9 @@ def run_scraper(category_name):
         )
         page = context.new_page()
         
-        # باز کردن صفحه دسته‌بندی برای پیدا کردن لینک‌ها
         print(f"Loading main category page: {target_url}")
         page.goto(target_url, wait_until="domcontentloaded", timeout=45000)
-        try: page.wait_for_timeout(2000) # صبر برای رندر شدن لینک‌ها
+        try: page.wait_for_timeout(2000)
         except: pass
         
         raw_links = page.locator("a").all()
@@ -100,16 +109,17 @@ def run_scraper(category_name):
         for idx, url in enumerate(urls, 1):
             try:
                 print(f"[{idx}/{len(urls)}] Analyzing: {url}")
-                # تغییر به domcontentloaded برای جلوگیری از گیر کردن و افزایش سرعت
                 page.goto(url, wait_until="domcontentloaded", timeout=30000)
-                try:
-                    page.wait_for_timeout(1000)
-                except:
-                    pass
+                try: page.wait_for_timeout(1000)
+                except: pass
                 
                 text_content = page.inner_text("body")
                 
-                # استخراج نام واقعی از تیتر اصلی صفحه (h1) با پشتیبانی از فال‌بک
+                # استخراج شناسهتاپ (id) از روی اسلاگ URL (Primary Key جدول)
+                slug = url.split("/")[-1].lower()
+                vehicle_id = slug
+                
+                # استخراج نام واقعی از تیتر اصلی صفحه (h1)
                 name = ""
                 try:
                     name = page.locator("h1").first.inner_text().strip()
@@ -117,7 +127,7 @@ def run_scraper(category_name):
                     pass
                 
                 if not name or "War Thunder Wiki" in name:
-                    name_from_url = url.split("/")[-1].replace("_", " ").title()
+                    name_from_url = slug.replace("_", " ").title()
                     name = page.title().replace(" - War Thunder Wiki", "").strip()
                     if not name or "War Thunder Wiki" in name: 
                         name = name_from_url
@@ -129,15 +139,24 @@ def run_scraper(category_name):
                     roman_map = {'I':1, 'II':2, 'III':3, 'IV':4, 'V':5, 'VI':6, 'VII':7, 'VIII':8, 'IX':9}
                     rank = roman_map.get(rank.upper(), None)
 
-                # استخراج کشور (تشخیص از روی URL و متن)
-                nations = ['usa', 'germany', 'ussr', 'britain', 'japan', 'china', 'italy', 'france', 'sweden', 'israel']
-                nation = None
-                text_lower = text_content.lower()
-                for n in nations:
-                    if f"_{n}" in url.lower() or f"nation: {n}" in text_lower or f"country: {n}" in text_lower:
-                        nation = n
+                # اصلاح تشخیص کشور بر اساس پیشوندهای واقعی URL
+                nation_prefixes = {
+                    'us_': 'usa',
+                    'germ_': 'germany',
+                    'ussr_': 'ussr',
+                    'uk_': 'britain',
+                    'jp_': 'japan',
+                    'cn_': 'china',
+                    'it_': 'italy',
+                    'fr_': 'france',
+                    'sw_': 'sweden',
+                    'il_': 'israel'
+                }
+                nation = "unknown"
+                for prefix, nat in nation_prefixes.items():
+                    if slug.startswith(prefix) or f"_{prefix}" in slug:
+                        nation = nat
                         break
-                if not nation: nation = "unknown"
                 
                 semantic_data = extract_semantic_data(text_content)
                 br_ab, br_rb, br_sb = extract_br_smart(page, text_content)
@@ -155,9 +174,11 @@ def run_scraper(category_name):
                                 break
                 except: pass
 
+                # اصلاح کلید category و اضافه کردن id الزامی برای جدول Supabase
                 vehicle_data = {
+                    "id": vehicle_id,
                     "name": name, 
-                    "type": category_name.lower(), 
+                    "category": db_category, 
                     "nation": nation,
                     "rank": rank, 
                     "br_ab": br_ab, "br_rb": br_rb, "br_sb": br_sb,
@@ -168,10 +189,10 @@ def run_scraper(category_name):
                     "source_url": url
                 }
 
-                # ذخیره در دیتابیس
-                supabase.table("vehicles").upsert(vehicle_data, on_conflict="source_url").execute()
+                # ذخیره در دیتابیس با تکیه بر id به عنوان کلید منحصر‌به‌فرد
+                supabase.table("vehicles").upsert(vehicle_data, on_conflict="id").execute()
                 saved_count += 1
-                print(f"    ✓ Saved: {name}")
+                print(f"    ✓ Saved [{nation.upper()}]: {name}")
                 
                 time.sleep(0.5)
 
@@ -180,6 +201,12 @@ def run_scraper(category_name):
                 continue
 
         browser.close()
+        
+        # مدیریت خطای هوشمند: اگر حتی یک رکورد هم ذخیره نشود، اکشن فیل می‌شود تا متوجه شویم
+        if saved_count == 0:
+            print("❌ CRITICAL ERROR: 0 vehicles were saved successfully.")
+            sys.exit(1)
+            
         print(f"\n🎉 OPERATION COMPLETE: {saved_count} vehicles perfectly integrated.")
 
 if __name__ == "__main__":
