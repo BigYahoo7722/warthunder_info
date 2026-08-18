@@ -82,7 +82,7 @@ def run_scraper(category_input):
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36"
         )
         
-        # مسدودسازی دانلود مدیا برای سرعت بالا (تگ‌های img در DOM باقی می‌مانند)
+        # مسدودسازی رسانه‌ها برای سرعت بالا
         context.route("**/*", lambda route: route.abort() if route.request.resource_type in ["image", "media", "font"] else route.continue_())
         
         page = context.new_page()
@@ -116,10 +116,6 @@ def run_scraper(category_input):
                     
                     let imageUrl = null;
                     const imgs = Array.from(document.querySelectorAll('img'));
-                    
-                    // استخراج آدرس اصلی تمام تصاویر صفحه برای پیدا کردن پرچم‌ها
-                    const imgSources = imgs.map(img => img.getAttribute('src') || '');
-                    
                     for (let img of imgs) {
                         const w = img.getAttribute('width');
                         const src = img.getAttribute('src');
@@ -129,13 +125,21 @@ def run_scraper(category_input):
                         }
                     }
                     
+                    // استخراج دقیق دسته‌بندی‌های اختصاصی صفحه (بدون تداخل با منوی پایین سایت)
+                    let catLinks = [];
+                    const catBox = document.querySelector('#mw-normal-catlinks');
+                    if (catBox) {
+                        // فقط لینک‌هایی که درون لیست (li) هستند تا خود کلمه Category خوانده نشود
+                        catLinks = Array.from(catBox.querySelectorAll('li a')).map(a => a.textContent.trim().toLowerCase());
+                    }
+                    
                     return {
-                        name: h1 ? h1.innerText.trim() : '',
+                        name: h1 ? h1.textContent.trim() : '',
                         title: document.title,
                         bodyText: document.body.innerText,
-                        brText: brEl ? brEl.innerText : '',
+                        brText: brEl ? brEl.textContent : '',
                         image_url: imageUrl,
-                        imgSources: imgSources
+                        catLinks: catLinks
                     };
                 }""")
                 
@@ -156,15 +160,13 @@ def run_scraper(category_input):
                     rank = roman_map.get(rank.upper(), None)
 
                 # ==========================================
-                # موتور قدرتمند تشخیص کشور (مبتنی بر المان‌های بصری و متنی)
+                # موتور تشخیص کشور (منبع مطلق: دسته‌بندی‌های مدیاویکی)
                 # ==========================================
                 nation = "unknown"
-                
-                # لایه طلایی ۱: استخراج کشور از اسم فایلِ پرچم و درخت تکنولوژی 
-                flag_map = {
-                    'united_states': 'usa', 'usa': 'usa',
-                    'soviet_union': 'ussr', 'ussr': 'ussr', 'russia': 'ussr',
-                    'united_kingdom': 'britain', 'britain': 'britain', 'uk': 'britain',
+                nations_map = {
+                    'usa': 'usa', 'united': 'usa',
+                    'ussr': 'ussr', 'soviet': 'ussr', 'russia': 'ussr',
+                    'britain': 'britain', 'great': 'britain', 'uk': 'britain',
                     'germany': 'germany',
                     'japan': 'japan',
                     'china': 'china',
@@ -174,55 +176,32 @@ def run_scraper(category_input):
                     'israel': 'israel'
                 }
                 
-                for src in page_data.get('imgSources', []):
-                    src_lower = src.lower()
-                    if 'flag' in src_lower or 'tree' in src_lower:
-                        for key, nat in flag_map.items():
-                            if f"_{key}" in src_lower or f"{key}_" in src_lower or f"/{key}." in src_lower:
-                                nation = nat
-                                break
-                    if nation != "unknown":
+                # لایه ۱ طلایی: چک کردن دسته‌بندی‌های رسمی خودِ ویکی
+                for cat in page_data.get('catLinks', []):
+                    cat_words = cat.split()
+                    if not cat_words: continue
+                    
+                    first_word = cat_words[0]
+                    
+                    # بررسی اسم‌های دو بخشی (Great Britain و United States)
+                    if first_word == "great" and len(cat_words) > 1 and cat_words[1] == "britain":
+                        nation = "britain"
+                        break
+                    elif first_word == "united" and len(cat_words) > 1 and cat_words[1] == "states":
+                        nation = "usa"
+                        break
+                    # بررسی بقیه کشورها
+                    elif first_word in nations_map:
+                        nation = nations_map[first_word]
                         break
                 
-                # لایه پشتیبان ۲: اسکن صفت‌های ملیتی در متن معرفی (آمریکایی، روسی و ...)
+                # لایه ۲ پشتیبان: اگر مدیاویکی دسته‌بندی نداشت، از اسلاگ استفاده کن
                 if nation == "unknown":
-                    clean_intro = re.sub(r'[^\w\s]', ' ', text_content[:2000].lower())
-                    adjectives_map = {
-                        ' american ': 'usa',
-                        ' soviet ': 'ussr', ' russian ': 'ussr',
-                        ' british ': 'britain',
-                        ' german ': 'germany',
-                        ' japanese ': 'japan',
-                        ' chinese ': 'china',
-                        ' italian ': 'italy',
-                        ' french ': 'france',
-                        ' swedish ': 'sweden',
-                        ' israeli ': 'israel'
-                    }
-                    for adj, nat in adjectives_map.items():
-                        if adj in clean_intro:
+                    for key, nat in nations_map.items():
+                        if f"_{key}" in slug or slug.endswith(key):
                             nation = nat
                             break
-
-                # لایه پشتیبان ۳: اسکن مستقیم پارامترهای اطلاعات (Country of Origin)
-                if nation == "unknown":
-                    nation_match = re.search(r'(?:Country of origin|Nation)\s*[:\n\-]?\s*(USA|Germany|USSR|Britain|Great Britain|Japan|China|Italy|France|Sweden|Israel)', text_content, re.IGNORECASE)
-                    if nation_match:
-                        n_str = nation_match.group(1).lower()
-                        nation = 'britain' if n_str == 'great britain' else n_str
-
-                # لایه پشتیبان ۴: پیشوندها و پسوندهای اسلاگ
-                if nation == "unknown":
-                    nation_prefixes = {
-                        'us_': 'usa', 'germ_': 'germany', 'ussr_': 'ussr', 'uk_': 'britain',
-                        'jp_': 'japan', 'cn_': 'china', 'it_': 'italy', 'fr_': 'france',
-                        'sw_': 'sweden', 'il_': 'israel', '_iaf': 'israel'
-                    }
-                    for prefix, nat in nation_prefixes.items():
-                        if slug.startswith(prefix) or f"_{prefix}" in slug or slug.endswith(prefix):
-                            nation = nat
-                            break
-                
+                            
                 semantic_data = extract_semantic_data(text_content)
                 br_ab, br_rb, br_sb = extract_br_smart(page_data['brText'], text_content)
 
