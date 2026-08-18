@@ -85,7 +85,6 @@ def run_scraper(category_name):
         
         for link in raw_links:
             href = link.get_attribute("href")
-            # تغییر کلیدی: فقط لینک‌هایی که شامل /unit/ هستند رو برمی‌داره
             if href and "/unit/" in href:
                 full_url = f"https://wiki.warthunder.com{href}" if href.startswith("/") else href
                 urls.add(full_url)
@@ -101,16 +100,22 @@ def run_scraper(category_name):
         for idx, url in enumerate(urls, 1):
             try:
                 print(f"[{idx}/{len(urls)}] Analyzing: {url}")
-                # استفاده از networkidle برای لود شدن کامل ساختار جدید سایت
                 page.goto(url, wait_until="networkidle", timeout=30000)
                 
                 text_content = page.inner_text("body")
                 
-                # استخراج هوشمندانه اسم از URL اگر صفحه تایتل درست نداشت
-                name_from_url = url.split("/")[-1].replace("_", " ").title()
-                name = page.title().replace(" - War Thunder Wiki", "").strip()
-                if not name or "War Thunder Wiki" in name: 
-                    name = name_from_url
+                # اصلاح شده: استخراج نام واقعی از تیتر اصلی صفحه (h1) با پشتیبانی از فال‌بک
+                name = ""
+                try:
+                    name = page.locator("h1").first.inner_text().strip()
+                except:
+                    pass
+                
+                if not name or "War Thunder Wiki" in name:
+                    name_from_url = url.split("/")[-1].replace("_", " ").title()
+                    name = page.title().replace(" - War Thunder Wiki", "").strip()
+                    if not name or "War Thunder Wiki" in name: 
+                        name = name_from_url
                 
                 # استخراج رنک
                 rank_match = re.search(r'Rank\s*([IVX]+|\d+)', text_content, re.IGNORECASE)
@@ -161,9 +166,8 @@ def run_scraper(category_name):
                 # ذخیره در دیتابیس
                 supabase.table("vehicles").upsert(vehicle_data, on_conflict="source_url").execute()
                 saved_count += 1
-                print(f"   ✓ Saved: {name}")
+                print(f"    ✓ Saved: {name}")
                 
-                # وقفه کوتاه برای جلوگیری از فشار به سرور
                 time.sleep(1)
 
             except Exception as e:
