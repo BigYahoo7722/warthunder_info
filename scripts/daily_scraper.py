@@ -1,6 +1,6 @@
 import os
-import re
 import sys
+import re
 import argparse
 from playwright.sync_api import sync_playwright
 from supabase import create_client, Client
@@ -18,12 +18,11 @@ if not SUPABASE_URL or not SUPABASE_KEY:
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ==========================================
-# ۲. توابع هوشمند استخراج دیتا
+# ۲. توابع استخراج دیتا
 # ==========================================
 def extract_nation(page):
     nation_map = {
-        'usa': 'usa', 'united states': 'usa',
-        'germany': 'germany',
+        'usa': 'usa', 'united states': 'usa', 'germany': 'germany',
         'ussr': 'ussr', 'soviet': 'ussr', 'russia': 'ussr',
         'britain': 'britain', 'uk': 'britain', 'great britain': 'britain',
         'japan': 'japan', 'china': 'china', 'italy': 'italy',
@@ -65,20 +64,33 @@ def extract_specs_extra(page):
     return weight, rp, sl
 
 # ==========================================
-# ۳. منطق اصلی اسکرایپر (کاملاً دیباگ شده)
+# ۳. منطق اصلی اسکرایپر (با بالاترین انعطاف‌پذیری)
 # ==========================================
 def run_scraper(category_name):
-    print(f"\n--- Starting scraper for category: {category_name} ---")
+    print(f"\n--- Starting smart scraper for category: {category_name} ---")
     
-    category_urls = {
-        'helicopters': 'https://wiki.warthunder.com/Category:Helicopters',
-        'aviation': 'https://wiki.warthunder.com/Category:Aviation',
-        'ground': 'https://wiki.warthunder.com/Category:Ground_vehicles'
+    # سیستم جستجوی مسیر (Fallback URLs): ربات آدرس‌های مختلف را تست می‌کند تا مسیر درست را بیابد
+    category_fallbacks = {
+        'helicopters': [
+            'https://wiki.warthunder.com/Helicopters',
+            'https://wiki.warthunder.com/Category:Helicopters',
+            'https://wiki.warthunder.com/Portal:Helicopters'
+        ],
+        'aviation': [
+            'https://wiki.warthunder.com/Aviation',
+            'https://wiki.warthunder.com/Category:Aviation',
+            'https://wiki.warthunder.com/Portal:Aviation'
+        ],
+        'ground': [
+            'https://wiki.warthunder.com/Ground_vehicles',
+            'https://wiki.warthunder.com/Category:Ground_vehicles',
+            'https://wiki.warthunder.com/Portal:Ground_vehicles'
+        ]
     }
-    target_url = category_urls.get(category_name.lower(), category_urls['helicopters'])
+    
+    target_urls = category_fallbacks.get(category_name.lower(), category_fallbacks['helicopters'])
 
     with sync_playwright() as p:
-        # شبیه‌سازی مرورگر واقعی برای فرار از Cloudflare
         browser = p.chromium.launch(headless=True)
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
@@ -86,49 +98,82 @@ def run_scraper(category_name):
         )
         page = context.new_page()
         
-        print(f"Navigating to {target_url}...")
-        page.goto(target_url, wait_until="networkidle", timeout=60000)
+        valid_page_found = False
         
-        # دیباگ: چاپ تایتل صفحه برای تشخیص بلاک شدن توسط Cloudflare
-        page_title = page.title()
-        print(f"Page Title Loaded: '{page_title}'")
-        if "Just a moment" in page_title or "Cloudflare" in page_title:
-            print("❌ ERROR: Blocked by Cloudflare Anti-Bot. The scraper cannot proceed.")
+        # تست کردن آدرس‌ها تا رسیدن به صفحه معتبر
+        for url in target_urls:
+            print(f"Testing URL: {url}...")
+            try:
+                response = page.goto(url, wait_until="domcontentloaded", timeout=45000)
+                if response and response.status == 200 and "Page not found" not in page.title():
+                    print(f"✅ Successfully loaded entry page: {url}")
+                    valid_page_found = True
+                    break
+            except Exception as e:
+                print(f"⚠️ Failed to load {url}: {e}")
+                
+        if not valid_page_found:
+            print("❌ ERROR: All fallback URLs failed. The website structure might have drastically changed.")
             sys.exit(1)
 
-        # صبر کردن تا لیست وسایل (div با آیدی mw-pages) لود شود
+        # استخراج گسترده لینک‌ها
         try:
-            page.wait_for_selector("#mw-pages", timeout=15000)
+            page.wait_for_selector(".mw-parser-output, #mw-pages, .tree-item", timeout=15000)
         except Exception:
-            print("⚠️ Warning: '#mw-pages' not found! Trying to gather links anyway...")
+            pass
 
-        # جمع‌آوری هوشمندانه لینک‌ها
-        raw_links = page.locator("#mw-pages a, .mw-category a, .mw-category-group a").all()
-        urls = []
+        raw_links = page.locator("a").all()
+        urls = set()
+        
+        # فیلتر ضد-آشغال (فقط لینک‌های معتبر ویکی را نگه می‌دارد)
+        bad_namespaces = ["Category:", "Special:", "File:", "User:", "Template:", "Talk:", "Help:", "Portal:", "Update:", "News:"]
+        
         for link in raw_links:
             href = link.get_attribute("href")
-            if href and not href.startswith("#") and ":" not in href: # فیلتر لینک‌های نامعتبر
-                full_url = f"https://wiki.warthunder.com{href}" if href.startswith("/") else href
-                if full_url not in urls:
-                    urls.append(full_url)
+            if href and href.startswith("/"):
+                # بررسی اینکه لینک حاوی صفحات نامعتبر نباشد
+                is_valid = True
+                for bad_ns in bad_namespaces:
+                    if f"/{bad_ns}" in href:
+                        is_valid = False
+                        break
+                
+                if is_valid and ":" not in href.split("/")[-1]:
+                    urls.add(f"https://wiki.warthunder.com{href}")
         
-        print(f"✅ Found {len(urls)} vehicles to process.")
+        urls = list(urls)
+        print(f"✅ Found {len(urls)} potential links to inspect.")
 
-        # اگر هیچی پیدا نشد، ارور بده تا تیک سبز الکی نخوره
         if len(urls) == 0:
-            print("❌ ERROR: No vehicle URLs found! Printing raw page content for debugging:")
-            print(page.content()[:1000]) # چاپ ۱۰۰۰ کاراکتر اول سورس صفحه
+            print("❌ ERROR: No links extracted. Something is blocking the scraper.")
             sys.exit(1)
 
-        # پردازش تک تک وسایل
+        saved_count = 0
         for idx, url in enumerate(urls, 1):
             try:
-                print(f"[{idx}/{len(urls)}] Scraping: {url}")
-                page.goto(url, wait_until="domcontentloaded", timeout=30000)
+                print(f"[{idx}/{len(urls)}] Checking: {url}")
+                response = page.goto(url, wait_until="domcontentloaded", timeout=30000)
                 
-                name = page.locator("h1#firstHeading").inner_text().strip()
+                # اگر ریدایرکت شد یا صفحه 404 بود، رد شو
+                if response and response.status != 200:
+                    continue
+                
+                # تأییدیه اصالت: اگر جدول مشخصات (Specs Card) نداشت، یعنی وسیله نقلیه نیست!
+                if page.locator(".specs_card_main_info, .specs_card_main_image, .general_info_blocks").count() == 0:
+                    print("   ↪ Skipped: Not a valid vehicle page (No specs card found).")
+                    continue
+
+                name_locator = page.locator("h1#firstHeading")
+                if name_locator.count() == 0:
+                    continue
+                name = name_locator.inner_text().strip()
+                
                 nation = extract_nation(page)
                 rank = extract_rank(page)
+                
+                if nation is None and rank is None:
+                    continue
+                
                 weight_tons, research_cost_rp, purchase_cost_sl = extract_specs_extra(page)
                 
                 br_ab, br_rb, br_sb = None, None, None
@@ -158,15 +203,17 @@ def run_scraper(category_name):
                     "source_url": url
                 }
 
-                # ذخیره در Supabase - بروزرسانی در صورت تکراری بودن URL
+                # ذخیره ایمن در دیتابیس
                 supabase.table("vehicles").upsert(vehicle_data, on_conflict="source_url").execute()
+                saved_count += 1
+                print(f"   ✓ Saved: {name} ({nation.capitalize()} - Rank {rank})")
 
             except Exception as e:
                 print(f"⚠️ Error scraping {url}: {e}")
                 continue
 
         browser.close()
-        print("\n🎉 Scraping completed successfully!")
+        print(f"\n🎉 Scraping completed successfully! {saved_count} verified vehicles saved/updated in the database.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="War Thunder Wiki Scraper")
