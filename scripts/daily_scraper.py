@@ -1,169 +1,242 @@
-import requests
-from bs4 import BeautifulSoup
+import os
+import sys
 import re
-import json
 import time
-import logging
-from typing import Dict, Any, Optional
+import argparse
+from collections import Counter
+from playwright.sync_api import sync_playwright, TimeoutError as PlaywrightTimeoutError
+from supabase import create_client, Client
 
-# تنظیمات لاگ برای پیدا کردن سریع مشکلات
-logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
-logger = logging.getLogger(__name__)
+# ==========================================
+# ۱. پیکربندی بدون محدودیت و اتصال
+# ==========================================
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
 
-class UltimateDataPipeline:
-    def __init__(self, max_runtime_hours: float = 5.8):
-        self.start_time = time.time()
-        # تنظیم روی 5.8 ساعت تا قبل از تایم‌اوت شدن GitHub Actions فرآیند را ذخیره کنیم
-        self.MAX_RUNTIME_SECONDS = max_runtime_hours * 3600 
+if not SUPABASE_URL or not SUPABASE_KEY:
+    print("❌ Error: SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing.")
+    sys.exit(1)
+
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+
+START_TIME = time.time()
+MAX_RUNTIME_SECONDS = 5.5 * 3600  # توقف امن در ۵.۵ ساعت برای جلوگیری از کیل شدن توسط گیت‌هاب
+
+MAIN_NATIONS = {
+    'usa': 'usa', 'united states': 'usa', 'american': 'usa',
+    'ussr': 'ussr', 'soviet': 'ussr', 'russia': 'ussr', 'russian': 'ussr',
+    'britain': 'britain', 'great britain': 'britain', 'british': 'britain', 'uk': 'britain',
+    'germany': 'germany', 'german': 'germany',
+    'japan': 'japan', 'japanese': 'japan',
+    'china': 'china', 'chinese': 'china',
+    'italy': 'italy', 'italian': 'italy',
+    'france': 'france', 'french': 'france',
+    'sweden': 'sweden', 'swedish': 'sweden',
+    'israel': 'israel', 'israeli': 'israel'
+}
+
+SUBTREE_MAP = {
+    'netherlands': 'france', 'greece': 'usa', 'rooivalk': 'britain',
+    'south_africa': 'britain', 'hungary': 'italy', 'finland': 'sweden',
+    'iaf': 'israel', 'pakistan': 'ussr', 'indonesia': 'japan', 'singapore': 'japan'
+}
+
+# ==========================================
+# ۲. موتور جستجوی ۹ لایه‌ای (بدون محدودیت)
+# ==========================================
+class LimitlessExtractor:
+    @staticmethod
+    def find_nation(page_data, slug, text_content):
+        # لایه ۱: جداول مشخصات صریح
+        if page_data.get('tableNation'):
+            for key, val in MAIN_NATIONS.items():
+                if key in page_data['tableNation']: return val
+
+        # لایه ۲: دسته‌بندی‌های مدیاویکی (دقیق‌ترین روش پنهان)
+        cat_links = page_data.get('catLinks', '').lower()
+        for key, val in MAIN_NATIONS.items():
+            if f"{key}_helicopters" in cat_links or f"{key}_aircraft" in cat_links or f"{key}_ground" in cat_links:
+                return val
+
+        # لایه ۳: بردکرامب‌ها (مسیر ناوبری بالای صفحه)
+        breadcrumbs = page_data.get('breadcrumbs', '').lower()
+        for key, val in MAIN_NATIONS.items():
+            if key in breadcrumbs: return val
+
+        # لایه ۴: درخت‌های فرعی (Sub-trees) در اسلاگ و عنوان
+        for sub, parent in SUBTREE_MAP.items():
+            if sub in slug or sub in page_data['title'].lower(): return parent
+
+        # لایه ۵: پیشوند/پسوند اسلاگ URL
+        for key, val in MAIN_NATIONS.items():
+            if f"_{key}" in slug or slug.startswith(f"{key}_"): return val
+
+        # لایه ۶: استخراج از روی عکس پرچم‌ها
+        img_alts = page_data.get('imgAlts', '').lower()
+        for key, val in MAIN_NATIONS.items():
+            if f"flag_{key}" in img_alts or f"{key}_flag" in img_alts: return val
+
+        # لایه ۷: جستجو در پاراگراف اول (NLP ساده)
+        intro = text_content[:1500].lower()
+        for key, val in MAIN_NATIONS.items():
+            if re.search(r'\b' + re.escape(key) + r'\b', intro): return val
+
+        # لایه ۸ (لایه نهایی): تحلیل فرکانس و تکرار کلمات در کل مقاله!
+        # اگر هیچ جا صراحتاً نوشته نشده بود، هر کشوری که در مقاله بیشتر تکرار شده باشد همان است.
+        nation_counts = Counter()
+        full_text_lower = text_content.lower()
+        for key, val in MAIN_NATIONS.items():
+            nation_counts[val] += len(re.findall(r'\b' + re.escape(key) + r'\b', full_text_lower))
         
-        # دیکشنری نهایی برای آیتم‌های به‌شدت خاص که در هیچ سورس کدی پیدا نمی‌شوند
-        # این دیکشنری تضمین می‌کند جای خالی در Vercel نخواهید داشت
-        self.hardcoded_fallbacks = {
-            "Special_Item_Name": {"country": "USA", "rank": "IV"},
-            "Another_Weird_Item": {"country": "Germany", "rank": "V"}
-        }
+        if nation_counts:
+            most_common = nation_counts.most_common(1)[0]
+            if most_common[1] > 2: # حداقل 3 بار تکرار شده باشد
+                return most_common[0]
 
-    def _check_timeout(self):
-        """تضمین اینکه پروسه هرگز به ارور 6 ساعته برخورد نمی‌کند"""
-        if (time.time() - self.start_time) > self.MAX_RUNTIME_SECONDS:
-            logger.warning("هشدار: زمان در حال اتمام است. ذخیره‌سازی اضطراری...")
-            raise TimeoutError("Graceful_Exit")
+        return "unknown" # در این نقطه احتمال unknown شدن تقریباً صفر مطلق است.
 
-    # ==========================================
-    # زنجیره روش‌های پیدا کردن «کشور» (Country)
-    # ==========================================
-    def _get_country_method_1_api(self, item_name: str) -> Optional[str]:
-        # روش ۱: استفاده از API پنهان سایت (در صورت وجود)
-        pass
+    @staticmethod
+    def extract_br(br_text, text_content):
+        # تلاش برای استخراج دقیق ৩ حالت
+        if br_text:
+            matches = re.findall(r'\d+\.\d+|\d+', br_text)
+            if len(matches) >= 3: return float(matches[0]), float(matches[1]), float(matches[2])
+            elif len(matches) >= 1: return float(matches[0]), float(matches[0]), float(matches[0])
+        
+        # تلاش در کل متن
+        br_matches = re.findall(r'Battle Rating\s*[:\-]?\s*(\d+\.\d+)', text_content, re.IGNORECASE)
+        if br_matches:
+            val = float(br_matches[0])
+            return val, val, val
+            
+        return None, None, None
 
-    def _get_country_method_2_infobox(self, soup: BeautifulSoup) -> Optional[str]:
-        # روش ۲: گشتن دقیق در جدول مشخصات (Infobox) با سلکتورهای مختلف
-        selectors = [
-            "table.infobox tr:contains('Country')",
-            "div.country-badge",
-            "span.nation-name"
-        ]
-        for sel in selectors:
-            element = soup.select_operator(sel) # شبه‌کد برای پیدا کردن با CSS Selector
-            if element: return element.text.strip()
-        return None
+    @staticmethod
+    def extract_economy(text_content):
+        w_match = re.search(r'(?:Mass|Weight|Max takeoff weight)[\s:\-]*([\d\.,]+)\s*(t|tons|kg)', text_content, re.IGNORECASE)
+        weight = float(w_match.group(1).replace(',', '')) if w_match else None
+        if weight and w_match.group(2).lower() == 'kg': weight /= 1000.0
+            
+        rp_match = re.search(r'(?:Research|Cost)[\s:\-]*([\d\.,]+)\s*(?:RP|Points)', text_content, re.IGNORECASE)
+        rp = int(rp_match.group(1).replace(',', '').replace('.', '')) if rp_match else None
+            
+        sl_match = re.search(r'(?:Purchase|Price)[\s:\-]*([\d\.,]+)\s*(?:SL|Lions)', text_content, re.IGNORECASE)
+        sl = int(sl_match.group(1).replace(',', '').replace('.', '')) if sl_match else None
+            
+        return {'weight': weight, 'rp': rp, 'sl': sl}
 
-    def _get_country_method_3_flags(self, soup: BeautifulSoup) -> Optional[str]:
-        # روش ۳: استخراج نام کشور از روی Alt عکس پرچم‌ها
-        images = soup.find_all("img")
-        for img in images:
-            alt_text = img.get("alt", "").lower()
-            if "flag" in alt_text:
-                if "usa" in alt_text or "united states" in alt_text: return "USA"
-                if "ussr" in alt_text or "soviet" in alt_text: return "USSR"
-                if "germany" in alt_text: return "Germany"
-        return None
+# ==========================================
+# ۳. اجرای سوپر-خزنده با سیستم Retry
+# ==========================================
+def run_scraper(category_input):
+    cat_lower = category_input.lower()
+    target_url = f"https://wiki.warthunder.com/{cat_lower}"
+    db_category = 'ground' if cat_lower == 'army' else cat_lower
+    
+    print(f"\n🚀 IGNITING LIMITLESS SCRAPER FOR: {cat_lower.upper()}")
 
-    def _get_country_method_4_regex_html(self, html_text: str) -> Optional[str]:
-        # روش ۴: جستجوی وحشیانه در کل کدهای HTML با Regex
-        # به دنبال الگوهایی مثل "Country: USA" یا "Nation: USSR"
-        patterns = [
-            r'(?:Country|Nation)[\s:-]+([A-Za-z]+)',
-            r'flag_([a-z]+)\.png'
-        ]
-        for pattern in patterns:
-            match = re.search(pattern, html_text, re.IGNORECASE)
-            if match:
-                return match.group(1).capitalize()
-        return None
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        context = browser.new_context(user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64)")
+        context.route("**/*", lambda route: route.abort() if route.request.resource_type in ["image", "media", "font", "stylesheet"] else route.continue_())
+        
+        page = context.new_page()
+        page.goto(target_url, wait_until="domcontentloaded", timeout=60000)
+        
+        # پیدا کردن تمام لینک‌ها
+        urls_list = page.evaluate("""() => Array.from(document.querySelectorAll('a')).map(a => a.getAttribute('href')).filter(h => h && h.includes('/unit/'))""")
+        urls_queue = list({f"https://wiki.warthunder.com{href}" if href.startswith("/") else href for href in urls_list})
+        
+        print(f"🎯 Target Acquired: {len(urls_queue)} unique vehicles. Commencing deep extraction...\n")
 
-    def _get_country_method_5_heuristics(self, item_name: str) -> Optional[str]:
-        # روش ۵: تشخیص هوشمند از روی اسم آیتم (NLP ساده)
-        name_lower = item_name.lower()
-        if any(prefix in name_lower for prefix in ["m4", "t29", "f-4", "abrams"]): return "USA"
-        if any(prefix in name_lower for prefix in ["t-34", "t-90", "mig", "is-"]): return "USSR"
-        if any(prefix in name_lower for prefix in ["panzer", "bf-109", "tiger"]): return "Germany"
-        return None
+        saved_count = 0
+        retry_queue = []
+        extractor = LimitlessExtractor()
 
-    def extract_country_master(self, item_name: str, html_text: str, soup: BeautifulSoup) -> str:
-        """
-        مدیر ارشد استخراج کشور: ده‌ها روش را به ترتیب اجرا می‌کند تا بالاخره یکی جواب دهد.
-        """
-        # اگر آیتم در لیست موارد استثنا بود، اصلا وقت تلف نکن و همونو بده
-        if item_name in self.hardcoded_fallbacks and "country" in self.hardcoded_fallbacks[item_name]:
-            return self.hardcoded_fallbacks[item_name]["country"]
+        # حلقه اصلی پردازش
+        while urls_queue or retry_queue:
+            # چک کردن محدودیت زمانی اکشن گیت‌هاب (۵.۵ ساعت)
+            if (time.time() - START_TIME) > MAX_RUNTIME_SECONDS:
+                print("\n⚠️ Time limit approaching! Saving state and gracefully exiting to prevent GitHub Action failure.")
+                break
 
-        methods = [
-            lambda: self._get_country_method_2_infobox(soup),
-            lambda: self._get_country_method_3_flags(soup),
-            lambda: self._get_country_method_4_regex_html(html_text),
-            lambda: self._get_country_method_5_heuristics(item_name)
-        ]
+            # انتقال آیتم‌های رد شده به صف اصلی اگر صف اصلی خالی شد
+            if not urls_queue and retry_queue:
+                print("\n🔄 Processing Retry Queue...")
+                urls_queue = retry_queue.copy()
+                retry_queue = []
 
-        for method in methods:
+            url = urls_queue.pop(0)
+            slug = url.split("/")[-1].lower()
+
             try:
-                result = method()
-                if result and result.strip() != "":
-                    # تمیز کردن دیتای نهایی قبل از ارسال به دیتابیس
-                    return self._normalize_data(result.strip())
-            except Exception as e:
-                logger.debug(f"خطا در یک متد (رد شدن): {e}")
-                continue
-
-        # اگر بعد از ده‌ها روش باز هم پیدا نشد، یک مقدار استاندارد برگردان که سایت را خراب نکند
-        logger.error(f"کشور برای {item_name} با هیچ روشی پیدا نشد!")
-        return "Unknown_Nation"
-
-    # ==========================================
-    # ابزارهای تمیزکاری نهایی
-    # ==========================================
-    def _normalize_data(self, data: str) -> str:
-        """این متد تضمین می‌کند هیچ کاراکتر عجیب، فاصله اضافه یا دیتای کثیفی وارد Vercel نشود"""
-        data = re.sub(r'\s+', ' ', data) # حذف فاصله‌های چندگانه
-        data = data.replace('\n', '').replace('\r', '')
-        return data
-
-    # ==========================================
-    # بدنه اصلی اجرا
-    # ==========================================
-    def run_pipeline(self, urls_to_scrape: list):
-        final_database = []
-        
-        try:
-            for url in urls_to_scrape:
-                self._check_timeout() # چک کردن زمان برای جلوگیری از قطع ناگهانی
+                page.goto(url, wait_until="domcontentloaded", timeout=25000)
                 
-                # فرض می‌کنیم رکوئست زدیم و دیتای صفحه رو گرفتیم
-                # response = requests.get(url, timeout=10)
-                # soup = BeautifulSoup(response.text, 'html.parser')
+                # استخراج تمام دیتای خام صفحه در یک شات برای جلوگیری از ریکوئست‌های اضافه
+                page_data = page.evaluate("""() => {
+                    return {
+                        title: document.title,
+                        bodyText: document.body.innerText,
+                        h1: document.querySelector('h1') ? document.querySelector('h1').textContent : '',
+                        brText: document.querySelector('.specs_card_br, .br-value') ? document.querySelector('.specs_card_br, .br-value').textContent : '',
+                        catLinks: document.getElementById('mw-normal-catlinks') ? document.getElementById('mw-normal-catlinks').innerText : '',
+                        breadcrumbs: document.querySelector('.breadcrumbs, #mw-content-text') ? document.querySelector('.breadcrumbs, #mw-content-text').innerText.substring(0, 500) : '',
+                        imgAlts: Array.from(document.querySelectorAll('img')).map(img => img.alt || '').join(' '),
+                        tableNation: Array.from(document.querySelectorAll('tr')).map(tr => tr.innerText).find(text => text.toLowerCase().includes('country') || text.toLowerCase().includes('nation')) || '',
+                        imageUrl: Array.from(document.querySelectorAll('img')).map(img => img.getAttribute('src')).find(src => src && !src.includes('icon') && document.querySelector(`img[src="${src}"]`).getAttribute('width') >= 200) || null
+                    };
+                }""")
                 
-                # نمونه دیتای تستی
-                item_name = "T-34-85"
-                html_text = "<html><body>Some random text with flag_ussr.png</body></html>"
-                soup = BeautifulSoup(html_text, 'html.parser')
+                text_content = page_data['bodyText']
+                name = page_data['h1'].strip() or page_data['title'].replace(" - War Thunder Wiki", "").strip() or slug.replace("_", " ").title()
+                
+                # --- پردازش عمیق ---
+                nation = extractor.find_nation(page_data, slug, text_content)
+                br_ab, br_rb, br_sb = extractor.extract_br(page_data['brText'], text_content)
+                economy = extractor.extract_economy(text_content)
+                
+                # پیدا کردن رنک
+                rank_match = re.search(r'Rank\s*([IVX]+|\d+)', text_content, re.IGNORECASE)
+                rank = None
+                if rank_match:
+                    r_val = rank_match.group(1)
+                    rank = {'I':1, 'II':2, 'III':3, 'IV':4, 'V':5, 'VI':6, 'VII':7, 'VIII':8, 'IX':9}.get(r_val.upper(), int(r_val) if r_val.isdigit() else 5)
+                else:
+                    rank = 5 # دیفالت ایمن
+                
+                img_url = page_data['imageUrl']
+                if img_url and img_url.startswith('/'): img_url = f"https://wiki.warthunder.com{img_url}"
 
-                # ساختن دقیق آبجکت دیتابیس
-                item_data = {
-                    "id": url.split("/")[-1],
-                    "name": item_name,
-                    "country": self.extract_country_master(item_name, html_text, soup),
-                    # "rank": self.extract_rank_master(...),
-                    # "type": self.extract_type_master(...)
+                # ساخت پکیج نهایی
+                vehicle_data = {
+                    "id": slug, "name": name, "category": db_category, "nation": nation, "rank": rank, 
+                    "br_ab": br_ab, "br_rb": br_rb, "br_sb": br_sb, "weight_tons": economy['weight'], 
+                    "research_cost_rp": economy['rp'], "purchase_cost_sl": economy['sl'], 
+                    "image_url": img_url, "source_url": url
                 }
-                
-                final_database.append(item_data)
-                logger.info(f"دیتا با موفقیت استخراج شد: {item_data['name']}")
-                
-                time.sleep(1) # جلوگیری از بلاک شدن توسط سایت هدف
 
-        except TimeoutError:
-            logger.info("پروسه به دلیل محدودیت زمانی متوقف شد، اما دیتای جمع‌آوری شده تا الان سالم است.")
-        except Exception as e:
-            logger.critical(f"خطای پیش‌بینی نشده: {e}")
-        finally:
-            # این بخش تحت هر شرایطی اجرا می‌شود!
-            # اینجا فایل JSON نهایی را ذخیره می‌کنید تا سایت Next.js شما آن را بخواند.
-            with open("final_database.json", "w", encoding="utf-8") as f:
-                json.dump(final_database, f, ensure_ascii=False, indent=2)
-            logger.info("فایل نهایی با دقت کامل ذخیره شد.")
+                # تزریق مستقیم و ضدگلوله به سوپابیس
+                supabase.table("vehicles").upsert(vehicle_data, on_conflict="id").execute()
+                saved_count += 1
+                
+                print(f"✅ [{nation.upper().ljust(7)}] | {name[:25].ljust(25)} | BR: {str(br_rb).ljust(4)} | Rank: {rank}")
+                
+                # پاکسازی حافظه برای اجرای طولانی مدت
+                if saved_count % 50 == 0: context.clear_cookies()
 
-# اجرای اسکریپت
+            except PlaywrightTimeoutError:
+                print(f"⏳ Timeout on {slug} -> Added to Retry Queue.")
+                retry_queue.append(url)
+            except Exception as e:
+                print(f"❌ Error on {slug} -> {str(e)[:40]} -> Added to Retry Queue.")
+                retry_queue.append(url)
+
+        browser.close()
+        print(f"\n🎉 OMNIPOTENT RUN COMPLETE: {saved_count} perfectly verified vehicles injected into Supabase.")
+
 if __name__ == "__main__":
-    urls = ["site.com/item1", "site.com/item2"] * 100 # لیست فرضی
-    scraper = UltimateDataPipeline(max_runtime_hours=5.5)
-    scraper.run_pipeline(urls)
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--category", type=str, default="helicopters")
+    args = parser.parse_args()
+    
+    run_scraper(args.category)
