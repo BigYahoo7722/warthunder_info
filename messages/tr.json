@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "War Thunder Codex — Saha Dosyası",
+    "description": "War Thunder'ın tüm araç listesi için eksiksiz, sanallaştırılmış bir referans."
+  },
+  "header": {
+    "classified": "Gizli — War Thunder Codex",
+    "cover": "Kapak"
+  },
+  "hero": {
+    "eyebrow1": "Saha Dosyası · Birleşik Silahlar",
+    "title1": "Her gövde, uçak ve şasi numarası — kataloglandı.",
+    "caption1": "On ulusta 2.600'den fazla kayıt indekslendi.",
+    "eyebrow2": "Yetki Seviyesi · Üst Sınıf",
+    "title2": "Rütbe VIII uçaklar, aviyonik takımına kadar çözüldü.",
+    "caption2": "Radar menzilleri, termal nesil, RWR — dosyada.",
+    "eyebrow3": "Ek C · Filo",
+    "title3": "Sahil devriyesinden açık denize — her gövde sınıfı.",
+    "caption3": "Deplasman, kemer zırhı ve hava savunma sistemleri karşılaştırıldı."
+  },
+  "sidebar": {
+    "navLabel": "Ulus ve araç kategorisi",
+    "clearanceFiledUnder": "Dosya şu başlık altında",
+    "selectPrompt": "Dosyasını açmak için soldan bir ulus seç."
+  },
+  "category": {
+    "aviation": "Havacılık",
+    "army": "Kara Kuvvetleri",
+    "fleet": "Filo",
+    "helicopters": "Helikopterler"
+  },
+  "nation": {
+    "usa": "ABD",
+    "germany": "Almanya",
+    "ussr": "SSCB",
+    "britain": "Britanya",
+    "japan": "Japonya",
+    "china": "Çin",
+    "italy": "İtalya",
+    "france": "Fransa",
+    "sweden": "İsveç",
+    "israel": "İsrail"
+  },
+  "grid": {
+    "recordsLoaded": "{loaded} / {total} yüklendi",
+    "noRecords": "Bu başlık altında kayıt bulunmuyor.",
+    "pullingChunk": "Arşivden bir sonraki parça alınıyor…",
+    "requestFailed": "Arşiv isteği başarısız oldu",
+    "requestFailedDetail": "API rotasına ulaşılamadı. Geliştirme sunucusunun çalıştığından emin ol."
+  },
+  "modal": {
+    "close": "Dosyayı kapat",
+    "rareAcquisition": "Nadir edinim",
+    "eventExclusive": "Etkinliğe özel",
+    "arcade": "Arcade",
+    "realistic": "Gerçekçi",
+    "simulator": "Simülatör",
+    "crew": "Mürettebat",
+    "repairRb": "Onarım {value} SL (RB)",
+    "slMultiplier": "SL çarpanı ×{value}",
+    "rpMultiplier": "RP çarpanı ×{value}",
+    "sectionMobility": "Hareket kabiliyeti",
+    "sectionFirepower": "Ateş gücü",
+    "sectionArmor": "Zırh ve hayatta kalma",
+    "sectionAvionics": "Aviyonik",
+    "sectionProTips": "Profesyonel ipuçları",
+    "secA": "Böl. A",
+    "secB": "Böl. B",
+    "secC": "Böl. C",
+    "secD": "Böl. D",
+    "fieldNotes": "Saha notları",
+    "power": "Güç",
+    "weight": "Ağırlık",
+    "powerToWeight": "Güç/ağırlık",
+    "topSpeed": "Azami hız",
+    "reverse": "Geri vites",
+    "turnTime": "Dönüş süresi",
+    "climb": "Tırmanma oranı",
+    "transmission": "Şanzıman",
+    "reloadBase": "Yeniden doldurma (temel)",
+    "reloadAced": "Yeniden doldurma (usta)",
+    "vertTraverse": "Dikey nişan hızı",
+    "horizTraverse": "Yatay nişan hızı",
+    "hullFront": "Gövde ön",
+    "hullSide": "Gövde yan",
+    "hullRear": "Gövde arka",
+    "turretFront": "Taret ön",
+    "turretSide": "Taret yan",
+    "turretRear": "Taret arka",
+    "era": "Reaktif zırh (ERA)",
+    "composite": "Kompozit zırh",
+    "fitted": "Takılı",
+    "none": "Yok",
+    "yes": "Evet",
+    "no": "Hayır",
+    "radarRange": "Radar menzili",
+    "thermal": "Termal",
+    "genN": "Nesil {n}",
+    "rwr": "Radar uyarı alıcısı (RWR)",
+    "laserWarning": "Lazer uyarısı",
+    "ballisticComputer": "Balistik bilgisayar"
+  },
+  "language": {
+    "label": "Dil",
+    "translateToggle": "Araç verisini çevir",
+    "translating": "Çevriliyor…",
+    "translateError": "Çeviri kullanılamıyor — orijinal metin gösteriliyor.",
+    "needsApiKey": "Çeviri API anahtarı yapılandırılmamış."
+  }
+}

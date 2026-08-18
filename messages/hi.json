@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "War Thunder Codex — फ़ील्ड डोज़ियर",
+    "description": "War Thunder की पूरी वाहन सूची के लिए एक संपूर्ण, वर्चुअलाइज़्ड संदर्भ।"
+  },
+  "header": {
+    "classified": "गोपनीय — War Thunder Codex",
+    "cover": "आवरण"
+  },
+  "hero": {
+    "eyebrow1": "फ़ील्ड डोज़ियर · संयुक्त शस्त्र",
+    "title1": "हर हल, हर विमान और हर पहचान संख्या — सूचीबद्ध।",
+    "caption1": "दस देशों में 2,600+ रिकॉर्ड अनुक्रमित।",
+    "eyebrow2": "क्लीयरेंस स्तर · शीर्ष श्रेणी",
+    "title2": "रैंक VIII विमान, एवियॉनिक्स सुइट तक डिकोड किए गए।",
+    "caption2": "रडार रेंज, थर्मल जनरेशन, RWR — फ़ाइल में दर्ज।",
+    "eyebrow3": "अनुबंध C · बेड़ा",
+    "title3": "तटीय गश्त से लेकर गहरे समुद्र तक — हर श्रेणी का पोत।",
+    "caption3": "विस्थापन, बेल्ट कवच और वायु-रक्षा प्रणालियाँ — परस्पर सत्यापित।"
+  },
+  "sidebar": {
+    "navLabel": "देश और वाहन श्रेणी",
+    "clearanceFiledUnder": "फ़ाइल इसके अंतर्गत दर्ज",
+    "selectPrompt": "फ़ाइल खोलने के लिए बाईं ओर से एक देश चुनें।"
+  },
+  "category": {
+    "aviation": "विमानन",
+    "army": "थल सेना",
+    "fleet": "बेड़ा",
+    "helicopters": "हेलीकॉप्टर"
+  },
+  "nation": {
+    "usa": "अमेरिका",
+    "germany": "जर्मनी",
+    "ussr": "सोवियत संघ",
+    "britain": "ब्रिटेन",
+    "japan": "जापान",
+    "china": "चीन",
+    "italy": "इटली",
+    "france": "फ़्रांस",
+    "sweden": "स्वीडन",
+    "israel": "इज़राइल"
+  },
+  "grid": {
+    "recordsLoaded": "{loaded} / {total} लोड हुए",
+    "noRecords": "इस श्रेणी में कोई रिकॉर्ड दर्ज नहीं है।",
+    "pullingChunk": "अभिलेखागार से अगला भाग लाया जा रहा है…",
+    "requestFailed": "अभिलेखागार अनुरोध विफल",
+    "requestFailedDetail": "API रूट से संपर्क नहीं हो सका। जांचें कि डेव सर्वर चल रहा है या नहीं।"
+  },
+  "modal": {
+    "close": "फ़ाइल बंद करें",
+    "rareAcquisition": "दुर्लभ अधिग्रहण",
+    "eventExclusive": "इवेंट-विशेष",
+    "arcade": "आर्केड",
+    "realistic": "रियलिस्टिक",
+    "simulator": "सिम्युलेटर",
+    "crew": "चालक दल",
+    "repairRb": "मरम्मत {value} SL (RB)",
+    "slMultiplier": "SL गुणक ×{value}",
+    "rpMultiplier": "RP गुणक ×{value}",
+    "sectionMobility": "गतिशीलता",
+    "sectionFirepower": "फायरपावर",
+    "sectionArmor": "कवच और उत्तरजीविता",
+    "sectionAvionics": "एवियॉनिक्स",
+    "sectionProTips": "प्रो टिप्स",
+    "secA": "खंड A",
+    "secB": "खंड B",
+    "secC": "खंड C",
+    "secD": "खंड D",
+    "fieldNotes": "फ़ील्ड नोट्स",
+    "power": "शक्ति",
+    "weight": "वज़न",
+    "powerToWeight": "शक्ति/वज़न",
+    "topSpeed": "अधिकतम गति",
+    "reverse": "रिवर्स गति",
+    "turnTime": "मोड़ समय",
+    "climb": "चढ़ाई दर",
+    "transmission": "ट्रांसमिशन",
+    "reloadBase": "रीलोड (बेस)",
+    "reloadAced": "रीलोड (एस्ड)",
+    "vertTraverse": "ऊर्ध्वाधर ट्रैवर्स",
+    "horizTraverse": "क्षैतिज ट्रैवर्स",
+    "hullFront": "हल फ्रंट",
+    "hullSide": "हल साइड",
+    "hullRear": "हल रियर",
+    "turretFront": "बुर्ज फ्रंट",
+    "turretSide": "बुर्ज साइड",
+    "turretRear": "बुर्ज रियर",
+    "era": "रिएक्टिव आर्मर (ERA)",
+    "composite": "कम्पोज़िट आर्मर",
+    "fitted": "लगा हुआ",
+    "none": "कोई नहीं",
+    "yes": "हाँ",
+    "no": "नहीं",
+    "radarRange": "रडार रेंज",
+    "thermal": "थर्मल",
+    "genN": "जनरेशन {n}",
+    "rwr": "रडार चेतावनी रिसीवर (RWR)",
+    "laserWarning": "लेज़र चेतावनी",
+    "ballisticComputer": "बैलिस्टिक कंप्यूटर"
+  },
+  "language": {
+    "label": "भाषा",
+    "translateToggle": "वाहन डेटा अनुवादित करें",
+    "translating": "अनुवाद हो रहा है…",
+    "translateError": "अनुवाद उपलब्ध नहीं — मूल पाठ दिखाया जा रहा है।",
+    "needsApiKey": "अनुवाद API कुंजी कॉन्फ़िगर नहीं की गई है।"
+  }
+}

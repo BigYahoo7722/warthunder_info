@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "War Thunder Codex — Dossier Polowe",
+    "description": "Kompletne, zwirtualizowane źródło informacji o całej liście pojazdów War Thunder."
+  },
+  "header": {
+    "classified": "Tajne — War Thunder Codex",
+    "cover": "Okładka"
+  },
+  "hero": {
+    "eyebrow1": "Dossier Polowe · Broń Połączona",
+    "title1": "Każdy kadłub, płatowiec i numer seryjny — skatalogowany.",
+    "caption1": "Ponad 2600 rekordów zindeksowanych w dziesięciu narodach.",
+    "eyebrow2": "Poziom Dostępu · Najwyższa Klasa",
+    "title2": "Samoloty rangi VIII, rozszyfrowane aż po awionikę.",
+    "caption2": "Zasięgi radaru, generacja termowizji, RWR — w aktach.",
+    "eyebrow3": "Aneks C · Flota",
+    "title3": "Od patrolu przybrzeżnego po pełne morze — każda klasa kadłuba.",
+    "caption3": "Wyporność, opancerzenie burtowe i systemy PLOT — zweryfikowane krzyżowo."
+  },
+  "sidebar": {
+    "navLabel": "Nacja i kategoria pojazdu",
+    "clearanceFiledUnder": "Akta prowadzone pod hasłem",
+    "selectPrompt": "Wybierz nację po lewej, aby otworzyć jej akta."
+  },
+  "category": {
+    "aviation": "Lotnictwo",
+    "army": "Wojska lądowe",
+    "fleet": "Flota",
+    "helicopters": "Śmigłowce"
+  },
+  "nation": {
+    "usa": "USA",
+    "germany": "Niemcy",
+    "ussr": "ZSRR",
+    "britain": "Wielka Brytania",
+    "japan": "Japonia",
+    "china": "Chiny",
+    "italy": "Włochy",
+    "france": "Francja",
+    "sweden": "Szwecja",
+    "israel": "Izrael"
+  },
+  "grid": {
+    "recordsLoaded": "Wczytano {loaded} / {total}",
+    "noRecords": "Brak rekordów w tej kategorii.",
+    "pullingChunk": "Pobieranie kolejnej partii z archiwum…",
+    "requestFailed": "Żądanie do archiwum nie powiodło się",
+    "requestFailedDetail": "Nie udało się połączyć z trasą API. Sprawdź, czy serwer deweloperski jest uruchomiony."
+  },
+  "modal": {
+    "close": "Zamknij akta",
+    "rareAcquisition": "Rzadkie nabytek",
+    "eventExclusive": "Ekskluzywny wydarzeniowy",
+    "arcade": "Arcade",
+    "realistic": "Realistyczny",
+    "simulator": "Symulator",
+    "crew": "Załoga",
+    "repairRb": "Naprawa {value} SL (RB)",
+    "slMultiplier": "Mnożnik SL ×{value}",
+    "rpMultiplier": "Mnożnik RP ×{value}",
+    "sectionMobility": "Mobilność",
+    "sectionFirepower": "Siła ognia",
+    "sectionArmor": "Pancerz i przeżywalność",
+    "sectionAvionics": "Awionika",
+    "sectionProTips": "Porady ekspertów",
+    "secA": "Sek. A",
+    "secB": "Sek. B",
+    "secC": "Sek. C",
+    "secD": "Sek. D",
+    "fieldNotes": "Notatki polowe",
+    "power": "Moc",
+    "weight": "Masa",
+    "powerToWeight": "Moc/masa",
+    "topSpeed": "Prędkość maksymalna",
+    "reverse": "Prędkość wsteczna",
+    "turnTime": "Czas obrotu",
+    "climb": "Prędkość wznoszenia",
+    "transmission": "Skrzynia biegów",
+    "reloadBase": "Przeładowanie (podstawowe)",
+    "reloadAced": "Przeładowanie (mistrzowskie)",
+    "vertTraverse": "Szybkość celowania w pionie",
+    "horizTraverse": "Szybkość celowania w poziomie",
+    "hullFront": "Przód kadłuba",
+    "hullSide": "Bok kadłuba",
+    "hullRear": "Tył kadłuba",
+    "turretFront": "Przód wieży",
+    "turretSide": "Bok wieży",
+    "turretRear": "Tył wieży",
+    "era": "Pancerz reaktywny (ERA)",
+    "composite": "Pancerz kompozytowy",
+    "fitted": "Zamontowany",
+    "none": "Brak",
+    "yes": "Tak",
+    "no": "Nie",
+    "radarRange": "Zasięg radaru",
+    "thermal": "Termowizja",
+    "genN": "Gen. {n}",
+    "rwr": "Odbiornik ostrzegawczy radaru (RWR)",
+    "laserWarning": "Ostrzeżenie laserowe",
+    "ballisticComputer": "Komputer balistyczny"
+  },
+  "language": {
+    "label": "Język",
+    "translateToggle": "Przetłumacz dane pojazdu",
+    "translating": "Tłumaczenie…",
+    "translateError": "Tłumaczenie niedostępne — wyświetlono tekst oryginalny.",
+    "needsApiKey": "Nie skonfigurowano klucza API tłumaczenia."
+  }
+}

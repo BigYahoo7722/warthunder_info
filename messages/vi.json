@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "War Thunder Codex — Hồ Sơ Thực Địa",
+    "description": "Tài liệu tham khảo đầy đủ, ảo hóa cho toàn bộ danh sách phương tiện War Thunder."
+  },
+  "header": {
+    "classified": "Tuyệt mật — War Thunder Codex",
+    "cover": "Trang bìa"
+  },
+  "hero": {
+    "eyebrow1": "Hồ Sơ Thực Địa · Binh Chủng Hợp Thành",
+    "title1": "Mọi thân xe, khung máy bay và số hiệu — đã được ghi danh.",
+    "caption1": "Hơn 2.600 hồ sơ được lập chỉ mục trên mười quốc gia.",
+    "eyebrow2": "Cấp Độ Truy Cập · Hạng Cao Nhất",
+    "title2": "Máy bay Rank VIII, giải mã đến hệ thống điện tử hàng không.",
+    "caption2": "Tầm radar, thế hệ ảnh nhiệt, RWR — đã lưu hồ sơ.",
+    "eyebrow3": "Phụ Lục C · Hải Quân",
+    "title3": "Từ tuần tra ven biển đến biển khơi — mọi lớp tàu.",
+    "caption3": "Lượng giãn nước, giáp đai và hệ thống phòng không đã được đối chiếu."
+  },
+  "sidebar": {
+    "navLabel": "Quốc gia và loại phương tiện",
+    "clearanceFiledUnder": "Hồ sơ được xếp dưới mục",
+    "selectPrompt": "Chọn một quốc gia bên trái để mở hồ sơ."
+  },
+  "category": {
+    "aviation": "Không quân",
+    "army": "Lục quân",
+    "fleet": "Hải quân",
+    "helicopters": "Trực thăng"
+  },
+  "nation": {
+    "usa": "Hoa Kỳ",
+    "germany": "Đức",
+    "ussr": "Liên Xô",
+    "britain": "Anh",
+    "japan": "Nhật Bản",
+    "china": "Trung Quốc",
+    "italy": "Ý",
+    "france": "Pháp",
+    "sweden": "Thụy Điển",
+    "israel": "Israel"
+  },
+  "grid": {
+    "recordsLoaded": "Đã tải {loaded} / {total}",
+    "noRecords": "Không có hồ sơ nào dưới mục này.",
+    "pullingChunk": "Đang lấy phần dữ liệu tiếp theo từ kho lưu trữ…",
+    "requestFailed": "Yêu cầu kho lưu trữ thất bại",
+    "requestFailedDetail": "Không thể kết nối tới API. Kiểm tra xem máy chủ phát triển có đang chạy không."
+  },
+  "modal": {
+    "close": "Đóng hồ sơ",
+    "rareAcquisition": "Vật phẩm hiếm",
+    "eventExclusive": "Độc quyền sự kiện",
+    "arcade": "Arcade",
+    "realistic": "Realistic",
+    "simulator": "Simulator",
+    "crew": "Kíp lái",
+    "repairRb": "Sửa chữa {value} SL (RB)",
+    "slMultiplier": "Hệ số SL ×{value}",
+    "rpMultiplier": "Hệ số RP ×{value}",
+    "sectionMobility": "Cơ động",
+    "sectionFirepower": "Hỏa lực",
+    "sectionArmor": "Giáp và khả năng sống sót",
+    "sectionAvionics": "Điện tử hàng không",
+    "sectionProTips": "Mẹo từ chuyên gia",
+    "secA": "Mục A",
+    "secB": "Mục B",
+    "secC": "Mục C",
+    "secD": "Mục D",
+    "fieldNotes": "Ghi chú thực địa",
+    "power": "Công suất",
+    "weight": "Trọng lượng",
+    "powerToWeight": "Tỷ lệ công suất/trọng lượng",
+    "topSpeed": "Tốc độ tối đa",
+    "reverse": "Tốc độ lùi",
+    "turnTime": "Thời gian quay",
+    "climb": "Tốc độ lên cao",
+    "transmission": "Hộp số",
+    "reloadBase": "Nạp đạn (cơ bản)",
+    "reloadAced": "Nạp đạn (kíp lái xuất sắc)",
+    "vertTraverse": "Tốc độ ngắm dọc",
+    "horizTraverse": "Tốc độ ngắm ngang",
+    "hullFront": "Giáp trước thân",
+    "hullSide": "Giáp hông thân",
+    "hullRear": "Giáp sau thân",
+    "turretFront": "Giáp trước tháp pháo",
+    "turretSide": "Giáp hông tháp pháo",
+    "turretRear": "Giáp sau tháp pháo",
+    "era": "Giáp phản ứng nổ (ERA)",
+    "composite": "Giáp composite",
+    "fitted": "Đã trang bị",
+    "none": "Không có",
+    "yes": "Có",
+    "no": "Không",
+    "radarRange": "Tầm radar",
+    "thermal": "Ảnh nhiệt",
+    "genN": "Thế hệ {n}",
+    "rwr": "Thiết bị cảnh báo radar (RWR)",
+    "laserWarning": "Cảnh báo laser",
+    "ballisticComputer": "Máy tính đạn đạo"
+  },
+  "language": {
+    "label": "Ngôn ngữ",
+    "translateToggle": "Dịch dữ liệu phương tiện",
+    "translating": "Đang dịch…",
+    "translateError": "Không có bản dịch — hiển thị văn bản gốc.",
+    "needsApiKey": "Chưa cấu hình khóa API dịch thuật."
+  }
+}

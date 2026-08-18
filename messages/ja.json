@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "War Thunder Codex — 野戦資料",
+    "description": "War Thunder の全車両リストを網羅した仮想化リファレンス。"
+  },
+  "header": {
+    "classified": "機密 — War Thunder Codex",
+    "cover": "表紙"
+  },
+  "hero": {
+    "eyebrow1": "野戦資料 · 諸兵科連合",
+    "title1": "すべての車体・機体・登録番号を網羅。",
+    "caption1": "10か国、2,600件以上のレコードを索引化。",
+    "eyebrow2": "アクセスレベル · トップティア",
+    "title2": "ランクVIII機、アビオニクスまで完全解析。",
+    "caption2": "レーダー探知距離、赤外線世代、RWR — 記録済み。",
+    "eyebrow3": "付属書C · 艦艇",
+    "title3": "沿岸警備から外洋まで — 全艦種を網羅。",
+    "caption3": "排水量、舷側装甲、対空システムを相互参照。"
+  },
+  "sidebar": {
+    "navLabel": "国家と車両カテゴリー",
+    "clearanceFiledUnder": "分類区分",
+    "selectPrompt": "左側の国家を選択してファイルを開く。"
+  },
+  "category": {
+    "aviation": "航空",
+    "army": "陸軍",
+    "fleet": "艦艇",
+    "helicopters": "ヘリコプター"
+  },
+  "nation": {
+    "usa": "アメリカ",
+    "germany": "ドイツ",
+    "ussr": "ソ連",
+    "britain": "イギリス",
+    "japan": "日本",
+    "china": "中国",
+    "italy": "イタリア",
+    "france": "フランス",
+    "sweden": "スウェーデン",
+    "israel": "イスラエル"
+  },
+  "grid": {
+    "recordsLoaded": "{loaded} / {total} 件読み込み済み",
+    "noRecords": "この項目に該当する記録はありません。",
+    "pullingChunk": "アーカイブから次のチャンクを取得中…",
+    "requestFailed": "アーカイブへのリクエストに失敗",
+    "requestFailedDetail": "APIルートに接続できませんでした。開発サーバーが起動しているか確認してください。"
+  },
+  "modal": {
+    "close": "資料を閉じる",
+    "rareAcquisition": "希少な入手経路",
+    "eventExclusive": "イベント限定",
+    "arcade": "アーケード",
+    "realistic": "リアリスティック",
+    "simulator": "シミュレーター",
+    "crew": "乗員数",
+    "repairRb": "修理費 {value} SL（RB）",
+    "slMultiplier": "SL倍率 ×{value}",
+    "rpMultiplier": "RP倍率 ×{value}",
+    "sectionMobility": "機動性",
+    "sectionFirepower": "火力",
+    "sectionArmor": "装甲と生存性",
+    "sectionAvionics": "アビオニクス",
+    "sectionProTips": "プロのコツ",
+    "secA": "第A項",
+    "secB": "第B項",
+    "secC": "第C項",
+    "secD": "第D項",
+    "fieldNotes": "現場メモ",
+    "power": "出力",
+    "weight": "重量",
+    "powerToWeight": "パワーウェイトレシオ",
+    "topSpeed": "最高速度",
+    "reverse": "後退速度",
+    "turnTime": "旋回時間",
+    "climb": "上昇率",
+    "transmission": "変速機",
+    "reloadBase": "装填時間（基本）",
+    "reloadAced": "装填時間（エース）",
+    "vertTraverse": "俯仰速度",
+    "horizTraverse": "旋回速度",
+    "hullFront": "車体正面",
+    "hullSide": "車体側面",
+    "hullRear": "車体後面",
+    "turretFront": "砲塔正面",
+    "turretSide": "砲塔側面",
+    "turretRear": "砲塔後面",
+    "era": "リアクティブアーマー（ERA）",
+    "composite": "複合装甲",
+    "fitted": "装備済み",
+    "none": "なし",
+    "yes": "はい",
+    "no": "いいえ",
+    "radarRange": "レーダー探知距離",
+    "thermal": "熱線暗視装置",
+    "genN": "第{n}世代",
+    "rwr": "レーダー警戒装置（RWR）",
+    "laserWarning": "レーザー警報",
+    "ballisticComputer": "弾道計算機"
+  },
+  "language": {
+    "label": "言語",
+    "translateToggle": "車両データを翻訳",
+    "translating": "翻訳中…",
+    "translateError": "翻訳は利用できません — 原文を表示しています。",
+    "needsApiKey": "翻訳APIキーが設定されていません。"
+  }
+}

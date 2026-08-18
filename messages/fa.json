@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "War Thunder Codex — پرونده میدانی",
+    "description": "مرجعی کامل و مجازی‌سازی‌شده برای کل فهرست وسایل نقلیه War Thunder."
+  },
+  "header": {
+    "classified": "محرمانه — War Thunder Codex",
+    "cover": "بازگشت"
+  },
+  "hero": {
+    "eyebrow1": "پرونده میدانی · نیروهای ترکیبی",
+    "title1": "هر بدنه، هر فروند و هر شماره بدنه — ثبت و طبقه‌بندی‌شده.",
+    "caption1": "بیش از ۲٬۶۰۰ رکورد در ده کشور نمایه‌شده.",
+    "eyebrow2": "سطح دسترسی · رتبه برتر",
+    "title2": "هواپیماهای رتبه هشتم، تا سطح سامانه الکترونیک پرنده رمزگشایی‌شده.",
+    "caption2": "برد رادار، نسل حرارتی، RWR — در پرونده.",
+    "eyebrow3": "ضمیمه C · نیروی دریایی",
+    "title3": "از گشت ساحلی تا آب‌های آزاد — هر رده بدنه.",
+    "caption3": "آبخور، زره کمربندی و سامانه‌های پدافند هوایی مرجع‌گذاری‌شده."
+  },
+  "sidebar": {
+    "navLabel": "کشور و دسته وسیله نقلیه",
+    "clearanceFiledUnder": "پرونده تحت عنوان",
+    "selectPrompt": "یک کشور را از سمت راست انتخاب کن تا پرونده‌اش باز شود."
+  },
+  "category": {
+    "aviation": "هوایی",
+    "army": "زمینی",
+    "fleet": "دریایی",
+    "helicopters": "بالگرد"
+  },
+  "nation": {
+    "usa": "آمریکا",
+    "germany": "آلمان",
+    "ussr": "شوروی",
+    "britain": "بریتانیا",
+    "japan": "ژاپن",
+    "china": "چین",
+    "italy": "ایتالیا",
+    "france": "فرانسه",
+    "sweden": "سوئد",
+    "israel": "اسرائیل"
+  },
+  "grid": {
+    "recordsLoaded": "{loaded} از {total} بارگذاری‌شده",
+    "noRecords": "رکوردی تحت این عنوان ثبت نشده.",
+    "pullingChunk": "در حال دریافت بخش بعدی از آرشیو…",
+    "requestFailed": "درخواست آرشیو ناموفق بود",
+    "requestFailedDetail": "اتصال به API برقرار نشد. مطمئن شو سرور توسعه در حال اجراست."
+  },
+  "modal": {
+    "close": "بستن پرونده",
+    "rareAcquisition": "اکتساب کمیاب",
+    "eventExclusive": "ویژه رویداد",
+    "arcade": "آرکید",
+    "realistic": "واقع‌گرایانه",
+    "simulator": "شبیه‌ساز",
+    "crew": "خدمه",
+    "repairRb": "تعمیر {value} SL (RB)",
+    "slMultiplier": "ضریب SL ×{value}",
+    "rpMultiplier": "ضریب RP ×{value}",
+    "sectionMobility": "تحرک",
+    "sectionFirepower": "آتش‌قدرت",
+    "sectionArmor": "زره و بقا",
+    "sectionAvionics": "الکترونیک پرنده",
+    "sectionProTips": "نکات حرفه‌ای",
+    "secA": "بخش A",
+    "secB": "بخش B",
+    "secC": "بخش C",
+    "secD": "بخش D",
+    "fieldNotes": "یادداشت‌های میدانی",
+    "power": "قدرت",
+    "weight": "وزن",
+    "powerToWeight": "قدرت به وزن",
+    "topSpeed": "سرعت حداکثر",
+    "reverse": "دنده عقب",
+    "turnTime": "زمان چرخش",
+    "climb": "نرخ صعود",
+    "transmission": "گیربکس",
+    "reloadBase": "بارگذاری مجدد (پایه)",
+    "reloadAced": "بارگذاری مجدد (کامل)",
+    "vertTraverse": "چرخش عمودی",
+    "horizTraverse": "چرخش افقی",
+    "hullFront": "جلوی بدنه",
+    "hullSide": "پهلوی بدنه",
+    "hullRear": "پشت بدنه",
+    "turretFront": "جلوی برج",
+    "turretSide": "پهلوی برج",
+    "turretRear": "پشت برج",
+    "era": "زره واکنشی (ERA)",
+    "composite": "زره کامپوزیت",
+    "fitted": "نصب‌شده",
+    "none": "ندارد",
+    "yes": "بله",
+    "no": "خیر",
+    "radarRange": "برد رادار",
+    "thermal": "حرارتی",
+    "genN": "نسل {n}",
+    "rwr": "هشداردهنده رادار (RWR)",
+    "laserWarning": "هشدار لیزر",
+    "ballisticComputer": "رایانه بالستیک"
+  },
+  "language": {
+    "label": "زبان",
+    "translateToggle": "ترجمه اطلاعات وسیله نقلیه",
+    "translating": "در حال ترجمه…",
+    "translateError": "ترجمه در دسترس نیست — متن اصلی نمایش داده می‌شود.",
+    "needsApiKey": "کلید API ترجمه تنظیم نشده است."
+  }
+}

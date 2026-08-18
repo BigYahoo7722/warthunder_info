@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "War Thunder Codex — Dossier sul campo",
+    "description": "Un riferimento completo e virtualizzato per l'intero elenco di veicoli di War Thunder."
+  },
+  "header": {
+    "classified": "Riservato — War Thunder Codex",
+    "cover": "Copertina"
+  },
+  "hero": {
+    "eyebrow1": "Dossier sul campo · Armi combinate",
+    "title1": "Ogni scafo, velivolo e numero di matricola — catalogato.",
+    "caption1": "Oltre 2.600 schede indicizzate in dieci nazioni.",
+    "eyebrow2": "Livello di accesso · Fascia alta",
+    "title2": "Velivoli di rango VIII, decodificati fino alla suite avionica.",
+    "caption2": "Portate radar, generazione termica, RWR — agli atti.",
+    "eyebrow3": "Allegato C · Flotta",
+    "title3": "Dalla pattuglia costiera all'alto mare — ogni classe di scafo.",
+    "caption3": "Dislocamento, corazza di cintura e sistemi antiaerei — incrociati."
+  },
+  "sidebar": {
+    "navLabel": "Nazione e categoria del veicolo",
+    "clearanceFiledUnder": "Fascicolo archiviato sotto",
+    "selectPrompt": "Seleziona una nazione a sinistra per aprire il suo fascicolo."
+  },
+  "category": {
+    "aviation": "Aviazione",
+    "army": "Esercito",
+    "fleet": "Flotta",
+    "helicopters": "Elicotteri"
+  },
+  "nation": {
+    "usa": "USA",
+    "germany": "Germania",
+    "ussr": "URSS",
+    "britain": "Gran Bretagna",
+    "japan": "Giappone",
+    "china": "Cina",
+    "italy": "Italia",
+    "france": "Francia",
+    "sweden": "Svezia",
+    "israel": "Israele"
+  },
+  "grid": {
+    "recordsLoaded": "{loaded} / {total} caricati",
+    "noRecords": "Nessuna scheda archiviata sotto questa voce.",
+    "pullingChunk": "Recupero del prossimo blocco dall'archivio…",
+    "requestFailed": "Richiesta all'archivio non riuscita",
+    "requestFailedDetail": "Impossibile raggiungere la rotta API. Verifica che il server di sviluppo sia in esecuzione."
+  },
+  "modal": {
+    "close": "Chiudi fascicolo",
+    "rareAcquisition": "Acquisizione rara",
+    "eventExclusive": "Esclusiva evento",
+    "arcade": "Arcade",
+    "realistic": "Realistico",
+    "simulator": "Simulatore",
+    "crew": "Equipaggio",
+    "repairRb": "Riparazione {value} SL (RB)",
+    "slMultiplier": "Moltiplicatore SL ×{value}",
+    "rpMultiplier": "Moltiplicatore RP ×{value}",
+    "sectionMobility": "Mobilità",
+    "sectionFirepower": "Potenza di fuoco",
+    "sectionArmor": "Corazza e sopravvivenza",
+    "sectionAvionics": "Avionica",
+    "sectionProTips": "Consigli da professionista",
+    "secA": "Sez. A",
+    "secB": "Sez. B",
+    "secC": "Sez. C",
+    "secD": "Sez. D",
+    "fieldNotes": "Note sul campo",
+    "power": "Potenza",
+    "weight": "Peso",
+    "powerToWeight": "Potenza/peso",
+    "topSpeed": "Velocità massima",
+    "reverse": "Retromarcia",
+    "turnTime": "Tempo di virata",
+    "climb": "Rateo di salita",
+    "transmission": "Trasmissione",
+    "reloadBase": "Ricarica (base)",
+    "reloadAced": "Ricarica (asso)",
+    "vertTraverse": "Puntamento verticale",
+    "horizTraverse": "Puntamento orizzontale",
+    "hullFront": "Scafo frontale",
+    "hullSide": "Scafo laterale",
+    "hullRear": "Scafo posteriore",
+    "turretFront": "Torretta frontale",
+    "turretSide": "Torretta laterale",
+    "turretRear": "Torretta posteriore",
+    "era": "Corazza reattiva (ERA)",
+    "composite": "Corazza composita",
+    "fitted": "Installata",
+    "none": "Nessuna",
+    "yes": "Sì",
+    "no": "No",
+    "radarRange": "Portata radar",
+    "thermal": "Termico",
+    "genN": "Gen. {n}",
+    "rwr": "Rilevatore radar (RWR)",
+    "laserWarning": "Allarme laser",
+    "ballisticComputer": "Computer balistico"
+  },
+  "language": {
+    "label": "Lingua",
+    "translateToggle": "Traduci dati veicolo",
+    "translating": "Traduzione in corso…",
+    "translateError": "Traduzione non disponibile — viene mostrato il testo originale.",
+    "needsApiKey": "Chiave API di traduzione non configurata."
+  }
+}

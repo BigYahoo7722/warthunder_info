@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "War Thunder Codex — الملف الميداني",
+    "description": "مرجع كامل وقابل للتصغير الافتراضي لكامل قائمة مركبات War Thunder."
+  },
+  "header": {
+    "classified": "سري للغاية — War Thunder Codex",
+    "cover": "رجوع"
+  },
+  "hero": {
+    "eyebrow1": "ملف ميداني · أسلحة مشتركة",
+    "title1": "كل هيكل وطائرة ورقم هيكل — مُفهرَس.",
+    "caption1": "أكثر من 2,600 سجل موزعة على عشر دول.",
+    "eyebrow2": "مستوى التصريح · الفئة العليا",
+    "title2": "طائرات الرتبة الثامنة، مفكوكة الشيفرة حتى منظومة الطيران الإلكتروني.",
+    "caption2": "نطاقات الرادار، جيل الأشعة الحرارية، أجهزة الإنذار الراداري — في الملف.",
+    "eyebrow3": "الملحق C · الأسطول",
+    "title3": "من الدوريات الساحلية إلى المياه الزرقاء — كل فئة هيكل.",
+    "caption3": "الإزاحة، درع الحزام، ومنظومات الدفاع الجوي — مرجعية متقاطعة."
+  },
+  "sidebar": {
+    "navLabel": "الدولة وفئة المركبة",
+    "clearanceFiledUnder": "الملف مصنّف تحت",
+    "selectPrompt": "اختر دولة من اليمين لفتح ملفها."
+  },
+  "category": {
+    "aviation": "طيران",
+    "army": "جيش",
+    "fleet": "أسطول",
+    "helicopters": "مروحيات"
+  },
+  "nation": {
+    "usa": "الولايات المتحدة",
+    "germany": "ألمانيا",
+    "ussr": "الاتحاد السوفيتي",
+    "britain": "بريطانيا",
+    "japan": "اليابان",
+    "china": "الصين",
+    "italy": "إيطاليا",
+    "france": "فرنسا",
+    "sweden": "السويد",
+    "israel": "إسرائيل"
+  },
+  "grid": {
+    "recordsLoaded": "{loaded} / {total} محمّل",
+    "noRecords": "لا توجد سجلات مصنّفة تحت هذا العنوان.",
+    "pullingChunk": "جارٍ سحب الجزء التالي من الأرشيف…",
+    "requestFailed": "فشل طلب الأرشيف",
+    "requestFailedDetail": "تعذّر الوصول إلى واجهة البرمجة. تأكد من تشغيل خادم التطوير."
+  },
+  "modal": {
+    "close": "إغلاق الملف",
+    "rareAcquisition": "اقتناء نادر",
+    "eventExclusive": "حصري لفعالية",
+    "arcade": "أركيد",
+    "realistic": "واقعي",
+    "simulator": "محاكاة",
+    "crew": "الطاقم",
+    "repairRb": "الإصلاح {value} SL (RB)",
+    "slMultiplier": "مضاعف SL ×{value}",
+    "rpMultiplier": "مضاعف RP ×{value}",
+    "sectionMobility": "الحركة",
+    "sectionFirepower": "القوة النارية",
+    "sectionArmor": "الدرع والبقاء",
+    "sectionAvionics": "الطيران الإلكتروني",
+    "sectionProTips": "نصائح المحترفين",
+    "secA": "القسم A",
+    "secB": "القسم B",
+    "secC": "القسم C",
+    "secD": "القسم D",
+    "fieldNotes": "ملاحظات ميدانية",
+    "power": "القدرة",
+    "weight": "الوزن",
+    "powerToWeight": "القدرة/الوزن",
+    "topSpeed": "السرعة القصوى",
+    "reverse": "الرجوع للخلف",
+    "turnTime": "زمن الدوران",
+    "climb": "معدل الصعود",
+    "transmission": "ناقل الحركة",
+    "reloadBase": "إعادة التلقيم (أساسي)",
+    "reloadAced": "إعادة التلقيم (كامل)",
+    "vertTraverse": "الدوران الرأسي",
+    "horizTraverse": "الدوران الأفقي",
+    "hullFront": "مقدمة الهيكل",
+    "hullSide": "جانب الهيكل",
+    "hullRear": "مؤخرة الهيكل",
+    "turretFront": "مقدمة البرج",
+    "turretSide": "جانب البرج",
+    "turretRear": "مؤخرة البرج",
+    "era": "درع تفاعلي (ERA)",
+    "composite": "درع مركب",
+    "fitted": "مُركَّب",
+    "none": "لا يوجد",
+    "yes": "نعم",
+    "no": "لا",
+    "radarRange": "مدى الرادار",
+    "thermal": "حراري",
+    "genN": "الجيل {n}",
+    "rwr": "جهاز إنذار راداري (RWR)",
+    "laserWarning": "إنذار ليزر",
+    "ballisticComputer": "حاسوب باليستي"
+  },
+  "language": {
+    "label": "اللغة",
+    "translateToggle": "ترجمة بيانات المركبة",
+    "translating": "جارٍ الترجمة…",
+    "translateError": "الترجمة غير متاحة — يُعرض النص الأصلي.",
+    "needsApiKey": "لم يتم تكوين مفتاح API للترجمة."
+  }
+}
