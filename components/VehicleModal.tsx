@@ -6,25 +6,7 @@ import type { Vehicle } from "@/lib/types";
 import { useTranslatedVehicle } from "@/hooks/useTranslatedVehicle";
 import { CollapsibleSection } from "./CollapsibleSection";
 
-const staggerContainer = {
-  hidden: { opacity: 0 },
-  show: {
-    opacity: 1,
-    transition: { staggerChildren: 0.04, delayChildren: 0.1 },
-  },
-};
-
-const fadeUpItem = {
-  hidden: { opacity: 0, y: 6, scale: 0.98 },
-  show: { 
-    opacity: 1, 
-    y: 0, 
-    scale: 1,
-    transition: { type: "spring", stiffness: 300, damping: 24 }
-  },
-};
-
-// لیست کلیدهایی که از قبل جای ثابت در UI دارند
+// لیست کلیدهایی که از قبل جای ثابت در UI دارند و نباید به عنوان دیتای ناشناس رندر شوند
 const KNOWN_KEYS = [
   "id", "name", "nation", "category", "rank", "isRare", "isEvent", "isPremium", "isSquadron",
   "br", "crew", "repairCost", "slMultiplier", "rpMultiplier", "mobility", 
@@ -48,7 +30,7 @@ export function VehicleModal({
   const displayName = translation.data?.name ?? vehicle.name;
   const displayProTips = translation.data?.proTips ?? vehicle.proTips ?? [];
 
-  // استخراج تمام کلیدهای غیرمنتظره و اضافه که در JSON وجود دارند
+  // فیلتر کردن دیتای اصلی و پیدا کردن کلیدهای اضافه‌ای که ربات/دیتابیس فرستاده
   const dynamicKeys = Object.keys(vehicle).filter(
     (key) => !KNOWN_KEYS.includes(key) && vehicle[key] !== null && vehicle[key] !== undefined
   );
@@ -68,7 +50,7 @@ export function VehicleModal({
           onClick={(e) => e.stopPropagation()}
           className="w-full max-w-2xl overflow-hidden rounded-sm border border-hairline bg-panel shadow-dossier"
         >
-          {/* Header */}
+          {/* بخش هدر کارت */}
           <div className="relative h-36 w-full overflow-hidden bg-gradient-to-br from-panel2 to-ink sm:h-44">
             <button
               type="button"
@@ -85,7 +67,7 @@ export function VehicleModal({
             </div>
           </div>
 
-          {/* BR Stats */}
+          {/* بخش اطلاعات ریتینگ (BR) */}
           <div className="grid grid-cols-3 divide-x divide-hairline border-b border-hairline">
             <BrStat label={t("modal.arcade")} value={vehicle.br.ab} />
             <BrStat label={t("modal.realistic")} value={vehicle.br.rb} />
@@ -95,7 +77,7 @@ export function VehicleModal({
           <div className="max-h-[50vh] overflow-y-auto p-4 space-y-4">
             {/* رندر خودکار تمام کادرهای جدید و غیرمنتظره */}
             {dynamicKeys.length > 0 && (
-              <CollapsibleSection title="اطلاعات تکمیلی" eyebrow="DYNAMIC DATA" defaultOpen>
+              <CollapsibleSection title="Classified Intel" eyebrow="RAW DATA" defaultOpen>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 font-mono text-xs">
                   {dynamicKeys.map((key) => (
                     <DynamicStat key={key} rawKey={key} value={vehicle[key]} />
@@ -104,7 +86,7 @@ export function VehicleModal({
               </CollapsibleSection>
             )}
 
-            {/* Pro Tips */}
+            {/* بخش نکات حرفه‌ای (Pro Tips) */}
             {displayProTips.length > 0 && (
               <CollapsibleSection title={t("modal.sectionProTips")} eyebrow={t("modal.fieldNotes")}>
                 <ul className="list-inside list-disc space-y-1 text-start font-body text-sm text-parchment/75">
@@ -121,6 +103,7 @@ export function VehicleModal({
   );
 }
 
+// کامپوننت کمکی برای نمایش دیتای داینامیک
 function DynamicStat({ rawKey, value }: { rawKey: string; value: any }) {
   // تبدیل اسم کلید مثل favoriteFood به Favorite Food
   const formattedLabel = rawKey
@@ -144,6 +127,7 @@ function DynamicStat({ rawKey, value }: { rawKey: string; value: any }) {
   );
 }
 
+// کامپوننت کمکی برای نمایش BR
 function BrStat({ label, value }: { label: string; value: number }) {
   return (
     <div className="px-3 py-2.5 text-center">
