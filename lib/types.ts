@@ -111,6 +111,10 @@ export interface Vehicle {
   // placeholder from scripts/generate_mock_data.py; scraped = real data
   // from daily_scraper.py, currently a genuine subset of this schema (see
   // that script's "NOT CONFIRMED" section for exactly what's missing).
+
+  // 👇 این خط جادویی اضافه شد 👇
+  // اجازه ورود هر کلید (Key) ناشناس با هر مقداری (Value) از سمت دیتابیس/ربات
+  [key: string]: any; 
 }
 
 export interface VehiclePage {
