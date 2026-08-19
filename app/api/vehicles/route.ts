@@ -52,8 +52,13 @@ function rowToVehicle(row: VehicleRow): Vehicle {
   return {
     id: row.id,
     name: row.name,
-    nation: (row.nation ?? "usa") as Vehicle["nation"],
-    category: row.category as Vehicle["category"],
+    // FIX: lowercase defensively. The scraper now writes lowercase nation
+    // ids directly (see scripts/daily_scraper.py), but this guards against
+    // any future write path (manual SQL edits, a different scraper, a bad
+    // migration) reintroducing a case mismatch that silently zeroes out
+    // every filtered query on the site.
+    nation: ((row.nation ?? "usa").toLowerCase()) as Vehicle["nation"],
+    category: (row.category ?? "").toLowerCase() as Vehicle["category"],
     rank: row.rank ?? 1,
     br: { ab: row.br_ab ?? rb, rb, sb: row.br_sb ?? rb },
     crew: row.crew ?? 1,
@@ -104,8 +109,13 @@ const getCachedPage = unstable_cache(
 
     const supabase = getSupabaseClient();
     let query = supabase.from("vehicles").select("*", { count: "exact" });
-    if (nation) query = query.eq("nation", nation);
-    if (category) query = query.eq("category", category);
+    // FIX: normalize to lowercase before filtering — Postgres text equality
+    // is case-sensitive, so a stray uppercase letter anywhere in the
+    // pipeline (scraper, manual insert, future data source) used to mean
+    // this filter matched nothing at all, with no error and no visible
+    // signal beyond an empty grid on the site.
+    if (nation) query = query.eq("nation", nation.toLowerCase());
+    if (category) query = query.eq("category", category.toLowerCase());
 
     // .range() is 0-based and INCLUSIVE on both ends (confirmed against
     // @supabase/postgrest-js's source directly during this build) — so
@@ -131,8 +141,8 @@ const getCachedPage = unstable_cache(
 
 function paginateLocal(nation: string | null, category: string | null, cursor: number): VehiclePage {
   let filtered = MOCK_VEHICLES;
-  if (nation) filtered = filtered.filter((v) => v.nation === nation);
-  if (category) filtered = filtered.filter((v) => v.category === category);
+  if (nation) filtered = filtered.filter((v) => v.nation === nation.toLowerCase());
+  if (category) filtered = filtered.filter((v) => v.category === category.toLowerCase());
   const items = filtered.slice(cursor, cursor + PAGE_SIZE);
   return {
     items,
