@@ -23,9 +23,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)-7s  %(
 log = logging.getLogger("immortal-scraper")
 
 BASE_URL = "https://wiki.warthunder.com"
-USER_AGENT = "war-thunder-codex-immortal-bot/3.0"
+USER_AGENT = "war-thunder-codex-immortal-bot/3.1"
 REQUEST_DELAY_SEC = 1.5 
-PAGE_TIMEOUT_MS = 30_000 # افزایش تایم‌اوت برای جلوگیری از کرش در اینترنت ضعیف
+PAGE_TIMEOUT_MS = 30_000 
 BATCH_SIZE = 20
 
 CATEGORY_PATHS = {
@@ -36,7 +36,6 @@ CATEGORY_PATHS = {
 }
 COASTAL_FLEET_PATH = "/boats"
 
-# دیکشنری فوق‌کامل برای تشخیص ۱۰۰٪ ملیت‌ها از روی اسلاگ (لینک)
 SLUG_PREFIX_TO_NATION = {
     "us_": "USA", "germ_": "Germany", "ussr_": "USSR", "su_": "USSR", 
     "uk_": "Britain", "gb_": "Britain", "jp_": "Japan", "cn_": "China", 
@@ -52,17 +51,28 @@ class ScrapeStats:
     upserted: int = 0
     errors: list[str] = field(default_factory=list)
 
+# ---------- فاز ۳: هوش مصنوعی زمان‌بندی (تزریق شده در پایتون) ----------
+def get_category_for_today() -> Optional[str]:
+    # گیت‌هاب از تقویم میلادی UTC استفاده می‌کند:
+    # 0=Monday(دوشنبه), 1=Tuesday(سه‌شنبه), 2=Wednesday(چهارشنبه) ... 5=Saturday(شنبه), 6=Sunday(یکشنبه)
+    day = datetime.now(timezone.utc).weekday()
+    
+    if day == 5: return "aviation"      # شنبه‌ها
+    if day == 6: return "army"          # یکشنبه‌ها
+    if day == 0: return "helicopters"   # دوشنبه‌ها
+    if day == 1: return "fleet"         # سه‌شنبه‌ها
+    return None                         # بقیه روزها استراحت
+# ------------------------------------------------------------------------
+
 def get_nation_smart(slug: str, dynamic_data: dict) -> str:
-    # ۱. اول از همه از دیکشنری لینک‌ها می‌خونیم
     for prefix, nation in SLUG_PREFIX_TO_NATION.items():
         if slug.lower().startswith(prefix):
             return nation
     
-    # ۲. اگه تو لینک نبود، می‌گردیم تو دیتای داینامیکی که از جدول سایت درآوردیم
     if "country" in dynamic_data:
         return dynamic_data["country"].title()
         
-    return "Unknown" # هیچوقت ارور نمیده، نهایتا میزنه نامشخص
+    return "Unknown"
 
 def _to_float(text: Optional[str]) -> Optional[float]:
     if not text: return None
@@ -79,7 +89,6 @@ def extract_vehicle_smart(page: Page, slug: str, category: str) -> Optional[dict
     
     time.sleep(REQUEST_DELAY_SEC)
 
-    # تزریق جاوااسکریپت برای استخراج فوق‌هوشمند (Self-Healing Extraction)
     try:
         page_data = page.evaluate(r"""() => {
             let dynamicData = {};
@@ -92,11 +101,9 @@ def extract_vehicle_smart(page: Page, slug: str, category: str) -> Optional[dict
                 }
             });
 
-            // استخراج عکس اصلی مستقیما از متاتگ سئو (قوی‌ترین روش)
             let ogImage = document.querySelector('meta[property="og:image"]');
             let imgUrl = ogImage ? ogImage.content : null;
             
-            // روش بک‌آپ برای عکس اگه سئو نداشت
             if (!imgUrl) {
                 let fallbackImg = document.querySelector('.image img');
                 imgUrl = fallbackImg ? fallbackImg.src : null;
@@ -118,7 +125,6 @@ def extract_vehicle_smart(page: Page, slug: str, category: str) -> Optional[dict
 
     nation = get_nation_smart(slug, page_data.get("dynamicData", {}))
     
-    # اطمینان از فرمت لینک عکس
     img_url = page_data.get("imageUrl")
     if img_url and str(img_url).startswith('/'):
         img_url = f"{BASE_URL}{img_url}"
@@ -155,14 +161,23 @@ def upsert_vehicles(client: SupabaseClient, vehicles: list[dict]) -> int:
             "scraped_at": v["scrapedAt"],
             "dynamic_specs": v.get("dynamicSpecs", {})
         })
-    # قانون «اگه نبود بساز، اگه بود فقط آپدیت کن»
     client.table("vehicles").upsert(rows, on_conflict="id").execute()
     return len(rows)
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--category", required=True)
+    # حالا پیش‌فرض روی auto تنظیم شده است
+    parser.add_argument("--category", default="auto", help="Specify category or leave blank for auto-schedule")
     args = parser.parse_args()
+
+    # تشخیص خودکار اینکه امروز نوبت کدام دسته است
+    target_category = args.category
+    if target_category == "auto":
+        target_category = get_category_for_today()
+        if not target_category:
+            log.info("Auto-Scheduler: Today is a rest day. No scraping scheduled. Zzzz...")
+            sys.exit(0)
+        log.info(f"Auto-Scheduler: Waking up! Today is targeted for [{target_category.upper()}]")
 
     client = get_supabase_client()
     stats = ScrapeStats()
@@ -172,8 +187,8 @@ def main():
         context = browser.new_context(user_agent=USER_AGENT)
         page = context.new_page()
 
-        paths = [CATEGORY_PATHS[args.category]] if args.category in CATEGORY_PATHS else []
-        if args.category == "fleet": paths.append(COASTAL_FLEET_PATH)
+        paths = [CATEGORY_PATHS[target_category]] if target_category in CATEGORY_PATHS else []
+        if target_category == "fleet": paths.append(COASTAL_FLEET_PATH)
 
         slugs = []
         for path in paths:
@@ -186,8 +201,8 @@ def main():
 
         batch = []
         for i, slug in enumerate(slugs, 1):
-            log.info(f"[{args.category} {i}/{len(slugs)}] Processing {slug}...")
-            vehicle = extract_vehicle_smart(page, slug, args.category)
+            log.info(f"[{target_category} {i}/{len(slugs)}] Processing {slug}...")
+            vehicle = extract_vehicle_smart(page, slug, target_category)
             if vehicle:
                 batch.append(vehicle)
             
@@ -200,7 +215,7 @@ def main():
 
         browser.close()
     
-    log.info(f"Mission Complete! Discovered: {stats.discovered} | Saved/Updated: {stats.upserted}")
+    log.info(f"Mission Complete! Category: {target_category} | Discovered: {stats.discovered} | Saved/Updated: {stats.upserted}")
 
 if __name__ == "__main__":
     main()
