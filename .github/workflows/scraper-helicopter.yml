@@ -1,8 +1,12 @@
 name: Scraper - Helicopters
 
+# Target: every Monday at 2:00 AM America/New_York.
+# See scraper-aviation.yml's header comment for why there are two cron
+# entries and a Time gate step — same DST reasoning applies here.
 on:
   schedule:
-    - cron: "30 3 * * 3"
+    - cron: "0 7 * * 1" # 2:00 AM EST (winter)
+    - cron: "0 6 * * 1" # 2:00 AM EDT (summer)
   workflow_dispatch: {}
 
 concurrency:
@@ -13,30 +17,45 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     timeout-minutes: 90
-
     steps:
+      - name: Time gate (only proceed at 2 AM America/New_York)
+        id: gate
+        run: |
+          hour=$(TZ="America/New_York" date +%H)
+          echo "Current New York hour: $hour"
+          if [ "$hour" = "02" ]; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Checkout
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.run == 'true'
         uses: actions/checkout@v4
 
       - name: Set up Python
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.run == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
 
       - name: Install Python dependencies
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.run == 'true'
         run: pip install -r scripts/requirements-daily-scraper.txt
 
       - name: Install Playwright's Chromium + OS deps
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.run == 'true'
         run: playwright install --with-deps chromium
 
       - name: Run scraper
+        if: github.event_name == 'workflow_dispatch' || steps.gate.outputs.run == 'true'
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python3 scripts/daily_scraper.py --category helicopters
 
       - name: Trigger Next.js cache revalidation
-        if: success()
+        if: (github.event_name == 'workflow_dispatch' || steps.gate.outputs.run == 'true') && success()
         env:
           REVALIDATE_URL: ${{ secrets.REVALIDATE_URL }}
           REVALIDATE_SECRET: ${{ secrets.REVALIDATE_SECRET }}
