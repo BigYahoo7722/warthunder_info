@@ -94,7 +94,21 @@ def get_category_for_today() -> Optional[str]:
 # ------------------------------------------------------------------------
 
 
-def get_nation_smart(slug: str, dynamic_data: dict) -> str:
+def get_nation_smart(slug: str, dynamic_data: dict, flag_country: Optional[str] = None) -> str:
+    """FIX: previously only checked SLUG_PREFIX_TO_NATION, which happens to
+    cover ground-vehicle slugs (they're prefixed, e.g. "us_m1a2_abrams")
+    but NOT aircraft/helicopter slugs (they never carry a country prefix —
+    e.g. "p-51d-5", "p-51d-20-na"). Every aviation/helicopter row was
+    silently landing on the "unknown" fallback as a result — confirmed
+    against the live Supabase table (1,279 aviation rows with
+    nation='unknown', 0 with a real nation). The country flag icon
+    (<img src=".../country_svg/country_usa.svg">) is present on every
+    vehicle page regardless of category, so it's used as the primary
+    signal now; the slug-prefix table is kept only as a secondary check
+    for the (rare) case the flag icon fails to load/parse."""
+    if flag_country:
+        return flag_country
+
     for prefix, nation in SLUG_PREFIX_TO_NATION.items():
         if slug.lower().startswith(prefix):
             return nation
@@ -172,28 +186,127 @@ def extract_vehicle_smart(page: Page, slug: str, category: str) -> Optional[dict
                 imgUrl = fallbackImg ? fallbackImg.src : null;
             }
 
+            // FIX: the country flag icon is present on every vehicle page
+            // regardless of category (aviation/army/fleet/helicopters) and
+            // encodes the nation directly in its filename, e.g.
+            // ".../country_svg/country_usa.svg" -> "usa". This is far more
+            // reliable than guessing from the URL slug, which only ever
+            // works for ground vehicles.
+            let flagCountry = null;
+            let flagImg = document.querySelector('img[src*="/country_svg/country_"]');
+            if (flagImg && flagImg.src) {
+                let m = flagImg.src.match(/country_svg\/country_([a-z_]+?)(?:_modern|_early|_h\d*)?\.svg/i);
+                if (m) flagCountry = m[1].toLowerCase();
+            }
+
+            // ---- deep spec extraction (label-based, not CSS-class-based) ----
+            // Calibrated against a real fetched wiki.warthunder.com page
+            // (M1A2 Abrams), since the actual DOM structure here is NOT a
+            // classic <th>/<td> wiki table (the old ".infobox tr" selector
+            // above matches nothing) — it's a card layout where the VALUE
+            // renders before its label, e.g. "VII Rank", "AB 12.0 RB 12.0
+            // SB 12.0 Battle rating". Collapsing all whitespace to single
+            // spaces makes these reliably matchable with regex.
+            const flat = document.body.innerText.replace(/\s+/g, ' ').trim();
+            function grab(re) { const m = flat.match(re); return m; }
+
+            const rankM = grab(/\b([IVX]{1,4})\s+Rank\b/);
+            const brM = grab(/AB\s+([\d.]+)\s+RB\s+([\d.]+)\s+SB\s+([\d.]+)\s+Battle rating/);
+            const costM = grab(/Main role\s+([\d,]+)\s+Research\s+([\d,]+)\s+Purchase/);
+            const crewM = grab(/Crew\s+(\d+)\s*persons?/i);
+            const visM = grab(/Visibility\s+(\d+)\s*%/);
+            const hullM = grab(/Hull\s+([\d.]+)\s*\/\s*([\d.]+)\s*\/\s*([\d.]+)\s*mm/);
+            const turretM = grab(/Turret\s+([\d.]+)\s*\/\s*([\d.]+)\s*\/\s*([\d.]+)\s*mm/);
+            const weightM = grab(/Weight\s+([\d.]+)\s*t\b/);
+            const reloadM = grab(/Reload basic crew.*?aces\s+([\d.]+)\s*(?:\u2192|->)\s*([\d.]+)\s*s/);
+            const compositeArmor = /Composite armour/i.test(flat);
+            const eraArmor = /Explosive reactive armour|\bERA\b/i.test(flat);
+
+            // Ammunition table: real <table> elements exist for weapons,
+            // so this part is high-confidence (not text-flattened guessing).
+            const ammo = [];
+            document.querySelectorAll('table').forEach(table => {
+                const rows = Array.from(table.querySelectorAll('tr')).slice(1);
+                rows.forEach(row => {
+                    const cells = Array.from(row.querySelectorAll('td')).map(c => c.innerText.trim());
+                    if (cells.length >= 8) {
+                        const rawName = cells[0].replace(/^[^A-Za-z0-9]*/, '').trim();
+                        const type = cells[1];
+                        const ranges = ['10m', '100m', '500m', '1000m', '1500m', '2000m'];
+                        const pen = {};
+                        ranges.forEach((r, i) => {
+                            const v = parseFloat(cells[2 + i]);
+                            pen[r] = isNaN(v) ? null : v;
+                        });
+                        if (rawName && type) ammo.push({ name: rawName, type: type, penetrationMm: pen });
+                    }
+                });
+            });
+
             return {
                 title: document.title,
                 h1: document.querySelector('h1') ? document.querySelector('h1').innerText : '',
                 imageUrl: imgUrl,
-                dynamicData: dynamicData
+                dynamicData: dynamicData,
+                flagCountry: flagCountry,
+                rankRoman: rankM ? rankM[1] : null,
+                brAb: brM ? brM[1] : null,
+                brRb: brM ? brM[2] : null,
+                brSb: brM ? brM[3] : null,
+                researchCostRp: costM ? costM[1] : null,
+                purchaseCostSl: costM ? costM[2] : null,
+                crew: crewM ? crewM[1] : null,
+                visibilityPct: visM ? visM[1] : null,
+                hullArmor: hullM ? [hullM[1], hullM[2], hullM[3]] : null,
+                turretArmor: turretM ? [turretM[1], turretM[2], turretM[3]] : null,
+                composite: compositeArmor,
+                era: eraArmor,
+                weightTons: weightM ? weightM[1] : null,
+                reloadBasicSec: reloadM ? reloadM[1] : null,
+                reloadAcedSec: reloadM ? reloadM[2] : null,
+                ammo: ammo
             };
         }""")
     except Exception as e:
         log.error(f"JS extraction failed on {slug}: {e}")
-        page_data = {"h1": "", "title": "", "imageUrl": None, "dynamicData": {}}
+        page_data = {"h1": "", "title": "", "imageUrl": None, "dynamicData": {}, "flagCountry": None}
 
     name = re.sub(r'[\-\|]?\s*War Thunder.*$', '', page_data['h1'] or page_data['title']).strip()
     if not name:
         name = slug.replace("_", " ").title()
 
-    nation = get_nation_smart(slug, page_data.get("dynamicData", {}))
+    nation = get_nation_smart(slug, page_data.get("dynamicData", {}), page_data.get("flagCountry"))
 
     img_url = page_data.get("imageUrl")
     if img_url and str(img_url).startswith('/'):
         img_url = f"{BASE_URL}{img_url}"
 
-    rank_val = _extract_rank(page_data.get("dynamicData", {}))
+    # Prefer the page's own "VII Rank" style value; fall back to the old
+    # generic-table-based guess (rarely fires now, kept as a safety net).
+    rank_val = RANK_ROMAN_TO_INT.get((page_data.get("rankRoman") or "").upper()) \
+        or _extract_rank(page_data.get("dynamicData", {}))
+
+    def _num(v):
+        if v in (None, ""):
+            return None
+        try:
+            return float(str(v).replace(",", ""))
+        except ValueError:
+            return None
+
+    hull = page_data.get("hullArmor")
+    turret = page_data.get("turretArmor")
+    armor = None
+    if hull or turret:
+        armor = {
+            "hull": {"frontMm": _num(hull[0]), "sideMm": _num(hull[1]), "backMm": _num(hull[2])} if hull else None,
+            "turret": {"frontMm": _num(turret[0]), "sideMm": _num(turret[1]), "backMm": _num(turret[2])} if turret else None,
+            "composite": bool(page_data.get("composite")),
+            "era": bool(page_data.get("era")),
+        }
+
+    ammo_raw = page_data.get("ammo") or []
+    ammunition = [{"name": a["name"], "type": a["type"], "penetrationMm": a["penetrationMm"]} for a in ammo_raw] or None
 
     return {
         "id": slug,
@@ -201,6 +314,15 @@ def extract_vehicle_smart(page: Page, slug: str, category: str) -> Optional[dict
         "nation": nation,
         "category": category,
         "rank": rank_val,
+        "brAb": _num(page_data.get("brAb")),
+        "brRb": _num(page_data.get("brRb")),
+        "brSb": _num(page_data.get("brSb")),
+        "crew": int(_num(page_data.get("crew"))) if _num(page_data.get("crew")) is not None else None,
+        "weightTons": _num(page_data.get("weightTons")),
+        "armor": armor,
+        "ammunition": ammunition,
+        "researchCostRp": _num(page_data.get("researchCostRp")),
+        "purchaseCostSl": _num(page_data.get("purchaseCostSl")),
         "imageUrl": img_url,
         "sourceUrl": url,
         "scrapedAt": datetime.now(timezone.utc).isoformat(),
@@ -228,6 +350,15 @@ def upsert_vehicles(client: SupabaseClient, vehicles: list[dict], stats: ScrapeS
             "nation": v["nation"],
             "category": v["category"],
             "rank": v["rank"],
+            "br_ab": v.get("brAb"),
+            "br_rb": v.get("brRb"),
+            "br_sb": v.get("brSb"),
+            "crew": v.get("crew"),
+            "weight_tons": v.get("weightTons"),
+            "armor": v.get("armor"),
+            "ammunition": v.get("ammunition"),
+            "research_cost_rp": v.get("researchCostRp"),
+            "purchase_cost_sl": v.get("purchaseCostSl"),
             "image_url": v.get("imageUrl"),
             "source_url": v["sourceUrl"],
             "scraped_at": v["scrapedAt"],
