@@ -2,53 +2,7 @@
 """
 daily_scraper.py
 =================
-Automated scraper: wiki.warthunder.com -> Supabase (Postgres). Designed to
-run ONE category per invocation (see --category) so it can be scheduled
-across different days of the week rather than all at once — see
-.github/workflows/daily-scraper.yml, which maps weekday -> category.
-
-GROUNDING: every URL pattern and field label below was checked against
-real, live pages fetched during this build:
-  - https://wiki.warthunder.com/unit/us_m1a2_abrams  (a real vehicle page)
-  - https://wiki.warthunder.com/ground                (a real category page)
-
-CONFIRMED:
-  - URL pattern /unit/{slug}; slug matches internal unit IDs
-    (e.g. "us_m1a2_abrams") and uses short nation prefixes: us_, germ_,
-    ussr_, uk_, jp_, cn_, it_, fr_, sw_, il_ — NOT full nation names.
-  - Category listing pages are lowercase: /aviation, /helicopters,
-    /ground, /ships, /boats (bluewater + coastal fleet respectively) —
-    each renders a full tech tree with a plain <a href="/unit/...">
-    per vehicle, confirmed on /ground (150+ USA vehicles alone).
-  - Field label text: "Rank" (roman numeral), "AB"/"RB"/"SB" battle
-    rating blocks (three SEPARATE labeled values, not one combined
-    "Battle Rating: X" line), "Crew {n} persons", "Weight" as a clean
-    single value, armor as "Hull {f} / {s} / {b} mm" and "Turret {f} /
-    {s} / {b} mm", and a genuine HTML <table> for ammunition with
-    penetration at 10/100/500/1000/1500/2000m.
-
-NOT CONFIRMED -- NEEDS A LIVE RUN TO LOCK DOWN:
-  - Exact CSS class names / DOM structure (this build only ever had a
-    text-rendered view of pages, never raw HTML) -- extraction below is
-    written against label TEXT rather than class names for that reason.
-  - Multi-mode numeric stats (forward/backward speed, power-to-weight,
-    engine power, turret rotation) render CONCATENATED with no separator
-    in the text-flattened view available here (e.g. "Forward 6876 km/h"
-    -- almost certainly 4 stacked per-mode values). Deliberately NOT
-    extracted for exactly this reason: guessing a split point and
-    shipping wrong numbers with false confidence is worse than leaving
-    the field out. Run once with a saved HTML dump on a few vehicles,
-    find the real per-mode markup, and extend extract_vehicle() once you
-    can see it.
-
-NOT AFFILIATED WITH OR ENDORSED BY GAIJIN ENTERTAINMENT. This targets
-Gaijin's own first-party site on an automated schedule -- a materially
-more sustained activity than a one-off manual fetch. Read
-https://legal.gaijin.net/termsofservice before relying on the schedule.
-
-Usage:
-    python3 daily_scraper.py --category army                    # real run, one category
-    python3 daily_scraper.py --category army --limit 10 --dry-run  # safe test, no DB writes
+Automated scraper: wiki.warthunder.com -> Supabase (Postgres).
 """
 
 from __future__ import annotations
@@ -77,28 +31,20 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s  %(levelname)-7s  %(
 log = logging.getLogger("daily-scraper")
 
 BASE_URL = "https://wiki.warthunder.com"
-USER_AGENT = "war-thunder-codex-daily-scraper/1.1 (personal fan-project; contact: set-your-email-here)"
-REQUEST_DELAY_SEC = 2.0  # conservative on purpose -- this is an automated job against a first-party site.
-# Worth knowing: even the slowest category (army, likely 800-1500+ vehicles across all nations/ranks) at
-# ~3.5s/vehicle including this delay finishes in under 1.5 hours -- there's no time-budget reason to speed
-# this up under the weekly-per-category schedule, only a risk-of-getting-blocked reason not to.
+USER_AGENT = "war-thunder-codex-daily-scraper/2.0 (personal fan-project)"
+# زمان تاخیر روی 1.5 تنظیم شد تا هواپیماها به لیمیت 6 ساعته گیت‌هاب اکشن نخورند
+REQUEST_DELAY_SEC = 1.5 
 PAGE_TIMEOUT_MS = 20_000
-BATCH_SIZE = 25  # vehicles per Supabase bulk upsert call
+BATCH_SIZE = 25
 
-# Confirmed lowercase on the live site -- do not capitalize these, and
-# note "fleet" needs BOTH listing pages (bluewater + coastal).
 CATEGORY_PATHS = {
     "aviation": "/aviation",
     "helicopters": "/helicopters",
     "army": "/ground",
-    "fleet": "/ships",  # + COASTAL_FLEET_PATH below
+    "fleet": "/ships",
 }
 COASTAL_FLEET_PATH = "/boats"
 
-# Cross-confirmed two ways: matches both the wiki's own /unit/ slugs and
-# the community datamine repo's tankmodels/*.blkx filenames from an
-# earlier build. Full nation NAMES ("usa", "germany") do NOT appear in
-# slugs -- only these short prefixes do.
 SLUG_PREFIX_TO_NATION = {
     "us_": "usa", "germ_": "germany", "ussr_": "ussr", "uk_": "britain",
     "jp_": "japan", "cn_": "china", "it_": "italy", "fr_": "france",
@@ -137,8 +83,6 @@ def _to_float(text: Optional[str]) -> Optional[float]:
 
 
 def discover_vehicle_slugs(page: Page, category: str, path: str) -> list[str]:
-    """Category listing pages render a full tech tree with a plain
-    <a href="/unit/{slug}"> per vehicle -- confirmed on /ground."""
     url = f"{BASE_URL}{path}"
     log.info("Discovering %s vehicles from %s", category, url)
     page.goto(url, timeout=PAGE_TIMEOUT_MS, wait_until="networkidle")
@@ -158,9 +102,6 @@ def discover_vehicle_slugs(page: Page, category: str, path: str) -> list[str]:
 
 
 def text_after_label(page: Page, label: str) -> Optional[str]:
-    """Best-effort: find an element containing exactly `label` and return
-    the trimmed text of its next sibling. Based on visible label text
-    rather than a CSS class (unconfirmed -- see module docstring)."""
     try:
         el = page.locator(f"text='{label}'").first
         return el.locator("xpath=following-sibling::*[1]").inner_text(timeout=2000).strip()
@@ -169,8 +110,6 @@ def text_after_label(page: Page, label: str) -> Optional[str]:
 
 
 def parse_armor_triplet(text: Optional[str]) -> Optional[dict]:
-    """"Hull 133 / 60 / 32 mm" -> {frontMm, sideMm, backMm}. Confirmed
-    format from the real us_m1a2_abrams page fetch."""
     if not text:
         return None
     match = re.search(r"([\d.]+)\s*/\s*([\d.]+)\s*/\s*([\d.]+)", text)
@@ -181,7 +120,6 @@ def parse_armor_triplet(text: Optional[str]) -> Optional[dict]:
 
 
 def extract_ammunition(page: Page) -> list[dict]:
-    """Confirmed as a real HTML <table> on the live page."""
     ammo: list[dict] = []
     try:
         rows = page.locator("table:has-text('Armor penetration') tbody tr").all()
@@ -203,10 +141,6 @@ def extract_ammunition(page: Page) -> list[dict]:
 
 
 def extract_image_url(page: Page) -> Optional[str]:
-    """Not part of the original grounded extraction -- kept from a real
-    improvement made directly to this script: the first image at least
-    200px wide, excluding anything with "icon" in its src (filters out
-    UI chrome / flag icons)."""
     try:
         images = page.locator("img").all()
         for img in images:
@@ -233,10 +167,46 @@ def extract_vehicle(page: Page, slug: str, category: str) -> Optional[dict]:
         return None
     polite_wait()
 
+    # استخراج دیتای داینامیک از جدول‌های سایت با جاوااسکریپت
     try:
-        name = page.locator("h1").first.inner_text(timeout=3000).strip()
-    except Exception:
-        name = slug
+        page_data = page.evaluate(r"""() => {
+            const infoRows = Array.from(document.querySelectorAll('.infobox tr, .specs-card tr'));
+            let dynamicData = {};
+            infoRows.forEach(row => {
+                const th = row.querySelector('th');
+                const td = row.querySelector('td');
+                if (th && td) {
+                    let key = th.innerText.trim().replace(/[^a-zA-Z0-9 ]/g, "").replace(/\s+/g, "_").toLowerCase();
+                    let value = td.innerText.trim();
+                    if (key && value) {
+                        dynamicData[key] = value;
+                    }
+                }
+            });
+
+            return {
+                title: document.title,
+                h1: document.querySelector('h1') ? document.querySelector('h1').textContent : '',
+                imageUrl: Array.from(document.querySelectorAll('img'))
+                    .map(img => img.getAttribute('src'))
+                    .find(src => src && !src.includes('icon') && document.querySelector(`img[src="${src}"]`).getAttribute('width') >= 200) || null,
+                dynamicData: dynamicData
+            };
+        }""")
+    except Exception as e:
+        log.warning("JS evaluation failed for %s: %s", slug, e)
+        page_data = {"h1": "", "title": "", "imageUrl": None, "dynamicData": {}}
+
+    raw_name = page_data['h1'].strip() or page_data['title'].strip()
+    name = re.sub(r'[\-\|]?\s*War Thunder.*$', '', raw_name, flags=re.IGNORECASE).strip()
+    if not name:
+        name = slug.replace("_", " ").title()
+
+    image_url = page_data['imageUrl']
+    if image_url and image_url.startswith('/'):
+        image_url = f"{BASE_URL}{image_url}"
+    elif not image_url:
+        image_url = extract_image_url(page)
 
     rank_text = (text_after_label(page, "Rank") or "").strip()
     rank = RANK_ROMAN_TO_INT.get(rank_text)
@@ -256,13 +226,12 @@ def extract_vehicle(page: Page, slug: str, category: str) -> Optional[dict]:
     research_rp = _to_float(text_after_label(page, "Research"))
     purchase_sl = _to_float(text_after_label(page, "Purchase"))
     ammunition = extract_ammunition(page)
-    image_url = extract_image_url(page)
 
     return {
-        "id": slug,  # PRIMARY KEY -- required, this is what on_conflict targets on upsert
+        "id": slug,
         "name": name,
         "nation": nation_from_slug(slug),
-        "category": category,  # NOT "type" -- must match the real column name
+        "category": category,
         "rank": rank,
         "br": br,
         "crew": crew,
@@ -274,35 +243,29 @@ def extract_vehicle(page: Page, slug: str, category: str) -> Optional[dict]:
         "purchaseCostSl": purchase_sl,
         "sourceUrl": url,
         "scrapedAt": datetime.now(timezone.utc).isoformat(),
+        "dynamicSpecs": page_data.get("dynamicData", {}) # دیتای هوشمند
     }
 
 
 def get_supabase_client() -> SupabaseClient:
     url = os.environ.get("SUPABASE_URL")
-    # SERVICE ROLE key, not anon -- this needs to bypass the public-read-only
-    # RLS policy in supabase-schema.sql to write. Never use this key
-    # anywhere client-facing; GitHub Actions secrets only.
     key = os.environ.get("SUPABASE_SERVICE_ROLE_KEY")
     if not url or not key:
-        sys.exit("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are not set. See README 'Database setup' section.")
+        sys.exit("SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY are not set.")
     try:
         client = create_client(url, key)
-        client.table("vehicles").select("id").limit(1).execute()  # cheap connectivity + schema check
+        client.table("vehicles").select("id").limit(1).execute() 
     except Exception as exc:
-        sys.exit(
-            f"Could not reach the Supabase 'vehicles' table: {exc}\n"
-            f"Did you run scripts/supabase-schema.sql in the Supabase SQL editor yet?"
-        )
+        sys.exit(f"Could not reach the Supabase 'vehicles' table: {exc}")
     return client
 
 
 def to_supabase_row(vehicle: dict) -> dict:
-    """Adapter from extract_vehicle()'s camelCase shape to
-    supabase-schema.sql's snake_case columns."""
     br = vehicle.get("br") or {}
+    # مپ کردن دیتا به همراه مقدار پیش‌فرض تا از کرش جلوگیری شود
     return {
         "id": vehicle["id"],
-        "name": vehicle["name"],
+        "name": vehicle.get("name") or vehicle["id"].replace("_", " ").title(),
         "nation": vehicle.get("nation"),
         "category": vehicle["category"],
         "rank": vehicle.get("rank"),
@@ -311,13 +274,14 @@ def to_supabase_row(vehicle: dict) -> dict:
         "br_sb": br.get("sb"),
         "crew": vehicle.get("crew"),
         "weight_tons": vehicle.get("weightTons"),
-        "armor": vehicle.get("armor"),
-        "ammunition": vehicle.get("ammunition"),
+        "armor": vehicle.get("armor") or {},
+        "ammunition": vehicle.get("ammunition") or [],
         "image_url": vehicle.get("imageUrl"),
         "research_cost_rp": vehicle.get("researchCostRp"),
         "purchase_cost_sl": vehicle.get("purchaseCostSl"),
         "source_url": vehicle.get("sourceUrl"),
         "scraped_at": vehicle.get("scrapedAt"),
+        "dynamic_specs": vehicle.get("dynamicSpecs") or {} # تزریق اطلاعات جانبی و داینامیک
     }
 
 
@@ -325,9 +289,7 @@ def upsert_vehicles(client: SupabaseClient, vehicles: list[dict]) -> int:
     if not vehicles:
         return 0
     rows = [to_supabase_row(v) for v in vehicles]
-    # on_conflict="id" -- "id" is the actual unique/primary-key column.
-    # source_url has NO unique constraint, so on_conflict="source_url"
-    # (as an earlier edit of this file used) fails on every call.
+    # ذخیره و به‌روزرسانی هوشمند دیتابیس (اگر بود آپدیت کن، اگر نبود بساز)
     client.table("vehicles").upsert(rows, on_conflict="id").execute()
     return len(rows)
 
@@ -361,7 +323,7 @@ def main() -> None:
                 log.info("[%s %d/%d] %s", category, i, len(slugs), slug)
                 try:
                     vehicle = extract_vehicle(page, slug, category)
-                except Exception as exc:  # noqa: BLE001 -- one bad page must not kill the whole run
+                except Exception as exc: 
                     stats.scraped_failed += 1
                     stats.errors.append(f"{slug}: {exc}")
                     log.error("Failed on %s: %s", slug, exc)
@@ -390,12 +352,6 @@ def main() -> None:
         stats.discovered, stats.scraped_ok, stats.scraped_failed, stats.upserted,
     )
 
-    # Fail LOUDLY rather than silently -- a run that saves zero rows must
-    # never print a success message. This checks BOTH the scrape failure
-    # rate AND that upserts actually happened when they should have,
-    # since a schema/column bug (like the on_conflict issue this file
-    # previously had) makes every scrape look "ok" while every DB write
-    # silently fails underneath it.
     if stats.discovered > 0 and stats.scraped_failed / stats.discovered > 0.15:
         log.error(
             "Failure rate %.0f%% exceeds the 15%% threshold -- almost certainly a broken "
