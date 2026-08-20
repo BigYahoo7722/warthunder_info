@@ -222,6 +222,41 @@ def extract_vehicle_smart(page: Page, slug: str, category: str) -> Optional[dict
             const compositeArmor = /Composite armour/i.test(flat);
             const eraArmor = /Explosive reactive armour|\bERA\b/i.test(flat);
 
+            // ---- generic auto-discovery pass ----
+            // The site's card layout consistently renders VALUE then LABEL
+            // on consecutive lines (confirmed: "VII" / "Rank", "USA" /
+            // "Research country", "350,000" / "Research", etc.) — this
+            // holds for every category (aviation/army/fleet/helicopters),
+            // not just the fields we specifically wrote a regex for above.
+            // Walking the raw (non-flattened) lines and pairing them lets
+            // the scraper pick up whatever stats a given vehicle type
+            // actually has — aviation's climb rate/service ceiling, fleet's
+            // displacement/hull class, etc. — without a human writing a
+            // new rule for every field on every category. Noise is
+            // filtered with conservative heuristics; anything that doesn't
+            // cleanly look like "short value" + "Capitalized Label" is
+            // dropped rather than guessed at.
+            const NAV_LABELS = new Set([
+                'cover', 'english', 'classified', 'field notes', 'close',
+                'arcade', 'realistic', 'simulator', 'aviation', 'army',
+                'fleet', 'helicopters', 'usa', 'germany', 'ussr', 'britain',
+                'japan', 'china', 'italy', 'france', 'sweden', 'israel'
+            ]);
+            const rawLines = document.body.innerText.split('\n').map(l => l.trim()).filter(Boolean);
+            const autoSpecs = {};
+            for (let i = 0; i < rawLines.length - 1; i++) {
+                const value = rawLines[i];
+                const label = rawLines[i + 1];
+                const labelLooksRight = /^[A-Z][A-Za-z0-9 /&()'.-]{2,45}$/.test(label)
+                    && !NAV_LABELS.has(label.toLowerCase())
+                    && !/\d{3,}/.test(label);
+                const valueLooksRight = value.length > 0 && value.length <= 40 && value !== label;
+                if (labelLooksRight && valueLooksRight) {
+                    const key = label.trim();
+                    if (!(key in autoSpecs)) autoSpecs[key] = value;
+                }
+            }
+
             // Ammunition table: real <table> elements exist for weapons,
             // so this part is high-confidence (not text-flattened guessing).
             const ammo = [];
@@ -264,7 +299,8 @@ def extract_vehicle_smart(page: Page, slug: str, category: str) -> Optional[dict
                 weightTons: weightM ? weightM[1] : null,
                 reloadBasicSec: reloadM ? reloadM[1] : null,
                 reloadAcedSec: reloadM ? reloadM[2] : null,
-                ammo: ammo
+                ammo: ammo,
+                autoSpecs: autoSpecs
             };
         }""")
     except Exception as e:
@@ -308,6 +344,22 @@ def extract_vehicle_smart(page: Page, slug: str, category: str) -> Optional[dict
     ammo_raw = page_data.get("ammo") or []
     ammunition = [{"name": a["name"], "type": a["type"], "penetrationMm": a["penetrationMm"]} for a in ammo_raw] or None
 
+    # Fields already surfaced through a dedicated column/UI section get
+    # dropped from the generic auto-discovered dump so nothing shows up
+    # twice on the site — everything else the page happened to expose
+    # (which varies by category: aviation has climb rate/service ceiling,
+    # fleet has displacement/hull class, etc.) passes through untouched.
+    ALREADY_COVERED_LABELS = {
+        "rank", "battle rating", "ab", "rb", "sb", "research", "purchase",
+        "research country", "main role", "crew", "visibility", "hull",
+        "turret", "weight", "reload basic crew skill", "reload aces crew skill",
+    }
+    auto_specs_raw = page_data.get("autoSpecs") or {}
+    dynamic_specs = {
+        k: v for k, v in auto_specs_raw.items()
+        if k.strip().lower() not in ALREADY_COVERED_LABELS
+    }
+
     return {
         "id": slug,
         "name": name,
@@ -326,7 +378,7 @@ def extract_vehicle_smart(page: Page, slug: str, category: str) -> Optional[dict
         "imageUrl": img_url,
         "sourceUrl": url,
         "scrapedAt": datetime.now(timezone.utc).isoformat(),
-        "dynamicSpecs": page_data.get("dynamicData", {}),
+        "dynamicSpecs": dynamic_specs,
     }
 
 
