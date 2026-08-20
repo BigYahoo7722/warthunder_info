@@ -34,6 +34,13 @@ interface VehicleRow {
   ammunition: ScrapedAmmo[] | null;
   research_cost_rp: number | null;
   purchase_cost_sl: number | null;
+  // FIX: was missing entirely — the scraper's generic auto-discovery pass
+  // (whatever label:value pairs a given vehicle's page happens to expose,
+  // e.g. aviation's climb rate vs. fleet's displacement) was being saved
+  // to Supabase but never read back out, so none of it ever reached the
+  // site. VehicleModal's existing "Classified Intel" auto-render section
+  // picks these up automatically once they're on the object.
+  dynamic_specs: Record<string, string> | null;
 }
 
 /**
@@ -98,6 +105,14 @@ function rowToVehicle(row: VehicleRow): Vehicle {
         : undefined,
     proTips: [],
     sourceDetail: "scraped",
+    // Whatever the scraper's generic auto-discovery pass found for this
+    // specific vehicle (varies by category — aviation gets its own set of
+    // fields, fleet gets its own, etc.) is spread directly onto the
+    // object. Vehicle's index signature + VehicleModal's KNOWN_KEYS filter
+    // mean these automatically render as their own stat rows without any
+    // hand-written mapping — new fields the site has never seen before
+    // just show up.
+    ...(row.dynamic_specs ?? {}),
   };
 }
 
