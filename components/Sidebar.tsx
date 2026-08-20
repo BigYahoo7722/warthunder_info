@@ -84,9 +84,19 @@ export function Sidebar({
                     : "border-transparent hover:border-brass-dim hover:bg-panel2/60"
                 )}
               >
-                <span className="text-xl" aria-hidden>
-                  {nation.flag}
-                </span>
+                {/* FIX: was {nation.flag} (an emoji) — Windows/Chrome has
+                    no flag-emoji font and fell back to raw "US"/"DE" text
+                    instead of a flag icon. A real SVG image renders
+                    identically everywhere. flagcdn.com serves free,
+                    reliable, cached-by-CDN flag SVGs keyed by ISO code. */}
+                <img
+                  src={`https://flagcdn.com/${nation.flagIso}.svg`}
+                  alt={nation.label}
+                  title={nation.label}
+                  className="h-4 w-6 object-cover"
+                  loading="lazy"
+                  aria-hidden
+                />
                 <span className="sr-only">{t(`nation.${nation.id}`)}</span>
               </button>
             </li>
