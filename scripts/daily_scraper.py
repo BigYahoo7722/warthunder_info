@@ -168,15 +168,20 @@ def extract_vehicle_smart(page: Page, slug: str, category: str) -> Optional[dict
 
     try:
         page_data = page.evaluate(r"""() => {
+            // FIX: this used to also run `.infobox tr, .specs-card tr`
+            // and dump whatever it matched into "dynamicData" / the DB's
+            // dynamic_specs column. Confirmed against real production
+            // data that this selector doesn't match the actual page
+            // structure at all — instead it was grabbing UNRELATED page
+            // chrome (cookie-consent banner buttons like "Accept all" /
+            // "Deny" / "Adjust", nav-menu items, footer links) and
+            // pairing them into nonsense key/value pairs that made it
+            // all the way to the site's UI ("ARMOUR: Survivability and
+            // armour", "OPTICS: 9.1 t" — neither field matches its
+            // label). Removed entirely; the label-based extraction below
+            // is the only spec source now, since it's been verified
+            // field-by-field against a real fetched page.
             let dynamicData = {};
-            document.querySelectorAll('.infobox tr, .specs-card tr').forEach(row => {
-                let th = row.querySelector('th');
-                let td = row.querySelector('td');
-                if (th && td) {
-                    let key = th.innerText.trim().replace(/[^a-zA-Z0-9 ]/g, "").replace(/\s+/g, "_").toLowerCase();
-                    dynamicData[key] = td.innerText.trim();
-                }
-            });
 
             let ogImage = document.querySelector('meta[property="og:image"]');
             let imgUrl = ogImage ? ogImage.content : null;
@@ -202,11 +207,10 @@ def extract_vehicle_smart(page: Page, slug: str, category: str) -> Optional[dict
             // ---- deep spec extraction (label-based, not CSS-class-based) ----
             // Calibrated against a real fetched wiki.warthunder.com page
             // (M1A2 Abrams), since the actual DOM structure here is NOT a
-            // classic <th>/<td> wiki table (the old ".infobox tr" selector
-            // above matches nothing) — it's a card layout where the VALUE
-            // renders before its label, e.g. "VII Rank", "AB 12.0 RB 12.0
-            // SB 12.0 Battle rating". Collapsing all whitespace to single
-            // spaces makes these reliably matchable with regex.
+            // classic <th>/<td> wiki table — it's a card layout where the
+            // VALUE renders before its label, e.g. "VII Rank", "AB 12.0
+            // RB 12.0 SB 12.0 Battle rating". Collapsing all whitespace to
+            // single spaces makes these reliably matchable with regex.
             const flat = document.body.innerText.replace(/\s+/g, ' ').trim();
             function grab(re) { const m = flat.match(re); return m; }
 
