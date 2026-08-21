@@ -215,67 +215,59 @@ def extract_vehicle_smart(page: Page, slug: str, category: str) -> Optional[dict
             function grab(re) { const m = flat.match(re); return m; }
 
             const rankM = grab(/\b([IVX]{1,4})\s+Rank\b/);
-            const brM = grab(/AB\s+([\d.]+)\s+RB\s+([\d.]+)\s+SB\s+([\d.]+)\s+Battle rating/);
+            // FIX: ships/boats only ever show AB and RB — there is no
+            // Simulator rating for naval vehicles ("AB 4.7 RB 4.7 Battle
+            // rating", no "SB" token at all). The original regex required
+            // an SB match, so it silently extracted BR=null for every
+            // single ship. Try the full AB/RB/SB form first (tanks,
+            // aircraft, helicopters), then fall back to AB/RB-only.
+            const brM = grab(/AB\s+([\d.]+)\s+RB\s+([\d.]+)\s+SB\s+([\d.]+)\s+Battle rating/)
+                || grab(/AB\s+([\d.]+)\s+RB\s+([\d.]+)\s+Battle rating/);
             const costM = grab(/Main role\s+([\d,]+)\s+Research\s+([\d,]+)\s+Purchase/);
             const crewM = grab(/Crew\s+(\d+)\s*persons?/i);
             const visM = grab(/Visibility\s+(\d+)\s*%/);
             const hullM = grab(/Hull\s+([\d.]+)\s*\/\s*([\d.]+)\s*\/\s*([\d.]+)\s*mm/);
             const turretM = grab(/Turret\s+([\d.]+)\s*\/\s*([\d.]+)\s*\/\s*([\d.]+)\s*mm/);
-            const weightM = grab(/Weight\s+([\d.]+)\s*t\b/);
-            const reloadM = grab(/Reload basic crew.*?aces\s+([\d.]+)\s*(?:\u2192|->)\s*([\d.]+)\s*s/);
+            // FIX: ships don't have a "Weight X t" line — they have
+            // "Displacement X t" instead. Ground vehicles never show
+            // "Displacement", so trying both and taking whichever matches
+            // is safe for every category.
+            const weightM = grab(/Weight\s+([\d.]+)\s*t\b/) || grab(/Displacement\s+([\d,.]+)\s*t\b/);
+            const reloadM = grab(/Reload basic crew.{0,80}?aces\s+([\d.]+)\s*(?:\u2192|->)\s*([\d.]+)\s*s/i);
             const compositeArmor = /Composite armour/i.test(flat);
             const eraArmor = /Explosive reactive armour|\bERA\b/i.test(flat);
 
-            // ---- generic auto-discovery pass ----
-            // The site's card layout consistently renders VALUE then LABEL
-            // on consecutive lines (confirmed: "VII" / "Rank", "USA" /
-            // "Research country", "350,000" / "Research", etc.) — this
-            // holds for every category (aviation/army/fleet/helicopters),
-            // not just the fields we specifically wrote a regex for above.
-            // Walking the raw (non-flattened) lines and pairing them lets
-            // the scraper pick up whatever stats a given vehicle type
-            // actually has — aviation's climb rate/service ceiling, fleet's
-            // displacement/hull class, etc. — without a human writing a
-            // new rule for every field on every category. Noise is
-            // filtered with conservative heuristics; anything that doesn't
-            // cleanly look like "short value" + "Capitalized Label" is
-            // dropped rather than guessed at.
-            const NAV_LABELS = new Set([
-                'cover', 'english', 'classified', 'field notes', 'close',
-                'arcade', 'realistic', 'simulator', 'aviation', 'army',
-                'fleet', 'helicopters', 'usa', 'germany', 'ussr', 'britain',
-                'japan', 'china', 'italy', 'france', 'sweden', 'israel'
-            ]);
-            const rawLines = document.body.innerText.split('\n').map(l => l.trim()).filter(Boolean);
-            const autoSpecs = {};
-            for (let i = 0; i < rawLines.length - 1; i++) {
-                const value = rawLines[i];
-                const label = rawLines[i + 1];
-                const labelLooksRight = /^[A-Z][A-Za-z0-9 /&()'.-]{2,45}$/.test(label)
-                    && !NAV_LABELS.has(label.toLowerCase())
-                    && !/\d{3,}/.test(label);
-                const valueLooksRight = value.length > 0 && value.length <= 40 && value !== label;
-                if (labelLooksRight && valueLooksRight) {
-                    const key = label.trim();
-                    if (!(key in autoSpecs)) autoSpecs[key] = value;
-                }
-            }
-
             // Ammunition table: real <table> elements exist for weapons,
             // so this part is high-confidence (not text-flattened guessing).
+            // FIX: range column headers are read from the table's own
+            // header row instead of a hardcoded ['10m','100m',...] list.
+            // Ground vehicles and aircraft both use 10m-2000m, but ships'
+            // main-battery guns use a completely different range set
+            // (1000m-15000m) — hardcoding the tank/aircraft ranges meant
+            // every ship's real 1000m penetration value was being saved
+            // under the wrong key ("10m"), silently mislabeling every
+            // naval gun's penetration table.
             const ammo = [];
             document.querySelectorAll('table').forEach(table => {
+                const headerCells = Array.from(table.querySelectorAll('tr')[0]?.querySelectorAll('th, td') ?? [])
+                    .map(c => c.innerText.trim())
+                    .filter((t) => /^\d[\d,]*\s*m$/i.test(t));
                 const rows = Array.from(table.querySelectorAll('tr')).slice(1);
                 rows.forEach(row => {
                     const cells = Array.from(row.querySelectorAll('td')).map(c => c.innerText.trim());
                     if (cells.length >= 8) {
                         const rawName = cells[0].replace(/^[^A-Za-z0-9]*/, '').trim();
                         const type = cells[1];
-                        const ranges = ['10m', '100m', '500m', '1000m', '1500m', '2000m'];
+                        // Prefer the table's own header labels; fall back
+                        // to the tank/aircraft default only if a table
+                        // genuinely has no readable header row.
+                        const ranges = headerCells.length >= 6
+                            ? headerCells.slice(0, 6)
+                            : ['10m', '100m', '500m', '1000m', '1500m', '2000m'];
                         const pen = {};
                         ranges.forEach((r, i) => {
                             const v = parseFloat(cells[2 + i]);
-                            pen[r] = isNaN(v) ? null : v;
+                            pen[r.replace(/\s+/g, '')] = isNaN(v) ? null : v;
                         });
                         if (rawName && type) ammo.push({ name: rawName, type: type, penetrationMm: pen });
                     }
@@ -303,8 +295,7 @@ def extract_vehicle_smart(page: Page, slug: str, category: str) -> Optional[dict
                 weightTons: weightM ? weightM[1] : null,
                 reloadBasicSec: reloadM ? reloadM[1] : null,
                 reloadAcedSec: reloadM ? reloadM[2] : null,
-                ammo: ammo,
-                autoSpecs: autoSpecs
+                ammo: ammo
             };
         }""")
     except Exception as e:
@@ -348,21 +339,18 @@ def extract_vehicle_smart(page: Page, slug: str, category: str) -> Optional[dict
     ammo_raw = page_data.get("ammo") or []
     ammunition = [{"name": a["name"], "type": a["type"], "penetrationMm": a["penetrationMm"]} for a in ammo_raw] or None
 
-    # Fields already surfaced through a dedicated column/UI section get
-    # dropped from the generic auto-discovered dump so nothing shows up
-    # twice on the site — everything else the page happened to expose
-    # (which varies by category: aviation has climb rate/service ceiling,
-    # fleet has displacement/hull class, etc.) passes through untouched.
-    ALREADY_COVERED_LABELS = {
-        "rank", "battle rating", "ab", "rb", "sb", "research", "purchase",
-        "research country", "main role", "crew", "visibility", "hull",
-        "turret", "weight", "reload basic crew skill", "reload aces crew skill",
-    }
-    auto_specs_raw = page_data.get("autoSpecs") or {}
-    dynamic_specs = {
-        k: v for k, v in auto_specs_raw.items()
-        if k.strip().lower() not in ALREADY_COVERED_LABELS
-    }
+    # dynamic_specs is intentionally empty for now. The two things that
+    # used to fill it (the old ".infobox tr" selector, and later a
+    # generic line-pairing heuristic) both turned out to pick up
+    # unrelated page chrome — cookie-consent banner buttons, nav menu
+    # items — and shipped that straight to the site's UI as if it were
+    # real vehicle data. Every field that's actually been verified against
+    # a real page lives in its own typed column below instead. Leaving
+    # this as {} rather than guessing again is the same call the project
+    # already made for aircraft datamine parsing and the official-wiki
+    # multi-mode stats: omit rather than ship wrong data with false
+    # confidence.
+    dynamic_specs = {}
 
     return {
         "id": slug,
