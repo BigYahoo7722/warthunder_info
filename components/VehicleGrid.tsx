@@ -43,10 +43,12 @@ export function VehicleGrid({
   nation,
   category,
   onOpenVehicle,
+  scrollParentRef,
 }: {
   nation: Nation;
   category: Category;
   onOpenVehicle: (v: Vehicle) => void;
+  scrollParentRef: React.RefObject<HTMLElement | null>;
 }) {
   const t = useTranslations();
   const {
@@ -111,7 +113,13 @@ export function VehicleGrid({
         </div>
       ) : (
         <VirtuosoGrid
-          useWindowScroll
+          // FIX: was `useWindowScroll` — the app's real scroll container
+          // is the <main> element (see page.tsx), not the browser window,
+          // which barely ever scrolls here. customScrollParent points
+          // Virtuoso at the element that actually scrolls, so endReached
+          // fires correctly as the user scrolls through the grid instead
+          // of stalling after Virtuoso's one-time initial overscan fetch.
+          customScrollParent={scrollParentRef.current ?? undefined}
           totalCount={items.length}
           components={{ List: GridList, Item: GridItem }}
           itemContent={(i) => (
@@ -128,6 +136,22 @@ export function VehicleGrid({
         <p className="p-4 text-center font-mono text-[11px] uppercase tracking-widest2 text-parchment/40">
           {t("grid.pullingChunk")}
         </p>
+      )}
+
+      {/* FIX: manual fallback so the user is never stuck even in the rare
+          case scroll-edge detection misses (e.g. a very short list that
+          never scrolls, or an unusual viewport). Purely additive — the
+          automatic infinite-scroll above still does the normal work. */}
+      {!isFetchingNextPage && hasNextPage && items.length > 0 && (
+        <div className="flex justify-center p-4">
+          <button
+            type="button"
+            onClick={() => fetchNextPage()}
+            className="rounded-sm border border-hairline px-4 py-2 font-mono text-[11px] uppercase tracking-widest2 text-parchment/70 transition-colors hover:border-brass hover:text-brass"
+          >
+            {"Load more"}
+          </button>
+        </div>
       )}
     </div>
   );
