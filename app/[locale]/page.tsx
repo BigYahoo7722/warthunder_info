@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Sidebar } from "@/components/Sidebar";
@@ -28,6 +28,15 @@ export default function Home() {
   } | null>(null);
   const [openVehicle, setOpenVehicle] = useState<Vehicle | null>(null);
   const [translateEnabled, setTranslateEnabled] = useState(false);
+  // FIX: the real scrollable region is this <main> element (see its
+  // "overflow-y-auto" below), not the browser window — the app shell is
+  // pinned to h-screen with overflow-hidden above it. VehicleGrid used to
+  // listen for WINDOW scroll (useWindowScroll), which barely ever fires
+  // here, so infinite-scroll silently stalled after the first page or
+  // two (whatever Virtuoso's initial overscan preloaded on mount) no
+  // matter how far the user actually scrolled inside <main>. Passing
+  // this ref down lets VehicleGrid track the real scroll container.
+  const scrollParentRef = useRef<HTMLElement>(null);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -61,13 +70,14 @@ export default function Home() {
             activeSelection={selection}
             onSelect={(nation, category) => setSelection({ nation, category })}
           />
-          <main className="flex-1 overflow-y-auto">
+          <main ref={scrollParentRef} className="flex-1 overflow-y-auto">
             <Hero visible={!selection} />
             {selection && (
               <VehicleGrid
                 nation={selection.nation}
                 category={selection.category}
                 onOpenVehicle={setOpenVehicle}
+                scrollParentRef={scrollParentRef}
               />
             )}
             {!selection && (
