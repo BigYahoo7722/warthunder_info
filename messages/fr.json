@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "War Thunder Codex — Dossier de terrain",
+    "description": "Une référence complète et virtualisée pour l'ensemble du parc de véhicules de War Thunder."
+  },
+  "header": {
+    "classified": "Confidentiel — War Thunder Codex",
+    "cover": "Couverture"
+  },
+  "hero": {
+    "eyebrow1": "Dossier de terrain · Armes combinées",
+    "title1": "Chaque coque, chaque appareil, chaque numéro de série — répertorié.",
+    "caption1": "Plus de 2 600 fiches indexées dans dix nations.",
+    "eyebrow2": "Niveau d'habilitation · Haut de gamme",
+    "title2": "Appareils de rang VIII, décryptés jusqu'à la suite avionique.",
+    "caption2": "Portées radar, génération thermique, RWR — au dossier.",
+    "eyebrow3": "Annexe C · Marine",
+    "title3": "De la patrouille côtière à la haute mer — chaque classe de coque.",
+    "caption3": "Déplacement, blindage de ceinture et systèmes antiaériens — recoupés."
+  },
+  "sidebar": {
+    "navLabel": "Nation et catégorie de véhicule",
+    "clearanceFiledUnder": "Dossier classé sous",
+    "selectPrompt": "Choisis une nation à gauche pour ouvrir son dossier."
+  },
+  "category": {
+    "aviation": "Aviation",
+    "army": "Armée de terre",
+    "fleet": "Marine",
+    "helicopters": "Hélicoptères"
+  },
+  "nation": {
+    "usa": "États-Unis",
+    "germany": "Allemagne",
+    "ussr": "URSS",
+    "britain": "Grande-Bretagne",
+    "japan": "Japon",
+    "china": "Chine",
+    "italy": "Italie",
+    "france": "France",
+    "sweden": "Suède",
+    "israel": "Israël"
+  },
+  "grid": {
+    "recordsLoaded": "{loaded} / {total} chargés",
+    "noRecords": "Aucune fiche classée sous cette rubrique.",
+    "pullingChunk": "Extraction du prochain lot depuis l'archive…",
+    "requestFailed": "Échec de la requête d'archive",
+    "requestFailedDetail": "Impossible de joindre la route API. Vérifie que le serveur de développement est lancé."
+  },
+  "modal": {
+    "close": "Fermer le dossier",
+    "rareAcquisition": "Acquisition rare",
+    "eventExclusive": "Exclusif à un événement",
+    "arcade": "Arcade",
+    "realistic": "Réaliste",
+    "simulator": "Simulateur",
+    "crew": "Équipage",
+    "repairRb": "Réparation {value} SL (RB)",
+    "slMultiplier": "Multiplicateur SL ×{value}",
+    "rpMultiplier": "Multiplicateur RP ×{value}",
+    "sectionMobility": "Mobilité",
+    "sectionFirepower": "Puissance de feu",
+    "sectionArmor": "Blindage et survie",
+    "sectionAvionics": "Avionique",
+    "sectionProTips": "Astuces de pro",
+    "secA": "Sect. A",
+    "secB": "Sect. B",
+    "secC": "Sect. C",
+    "secD": "Sect. D",
+    "fieldNotes": "Notes de terrain",
+    "power": "Puissance",
+    "weight": "Poids",
+    "powerToWeight": "Puissance/poids",
+    "topSpeed": "Vitesse max",
+    "reverse": "Marche arrière",
+    "turnTime": "Temps de virage",
+    "climb": "Taux de montée",
+    "transmission": "Transmission",
+    "reloadBase": "Rechargement (base)",
+    "reloadAced": "Rechargement (as)",
+    "vertTraverse": "Pointage vertical",
+    "horizTraverse": "Pointage horizontal",
+    "hullFront": "Caisse avant",
+    "hullSide": "Caisse latérale",
+    "hullRear": "Caisse arrière",
+    "turretFront": "Tourelle avant",
+    "turretSide": "Tourelle latérale",
+    "turretRear": "Tourelle arrière",
+    "era": "Blindage réactif (ERA)",
+    "composite": "Blindage composite",
+    "fitted": "Installé",
+    "none": "Aucun",
+    "yes": "Oui",
+    "no": "Non",
+    "radarRange": "Portée radar",
+    "thermal": "Thermique",
+    "genN": "Gén. {n}",
+    "rwr": "Détecteur radar (RWR)",
+    "laserWarning": "Alerte laser",
+    "ballisticComputer": "Calculateur balistique"
+  },
+  "language": {
+    "label": "Langue",
+    "translateToggle": "Traduire les données du véhicule",
+    "translating": "Traduction en cours…",
+    "translateError": "Traduction indisponible — texte original affiché.",
+    "needsApiKey": "Clé API de traduction non configurée."
+  }
+}

@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "War Thunder Codex — Feldakte",
+    "description": "Eine vollständige, virtualisierte Referenz für das gesamte War-Thunder-Fahrzeugregister."
+  },
+  "header": {
+    "classified": "Geheim — War Thunder Codex",
+    "cover": "Titelseite"
+  },
+  "hero": {
+    "eyebrow1": "Feldakte · Kombinierte Waffen",
+    "title1": "Jeder Rumpf, jedes Flugzeug, jede Fahrgestellnummer — erfasst.",
+    "caption1": "Über 2.600 Einträge in zehn Nationen indiziert.",
+    "eyebrow2": "Freigabestufe · Topklasse",
+    "title2": "Flugzeuge der Rang-VIII-Klasse, bis zur Avionik-Suite entschlüsselt.",
+    "caption2": "Radarreichweiten, Wärmebildgeneration, RWR — aktenkundig.",
+    "eyebrow3": "Anhang C · Marine",
+    "title3": "Von der Küstenpatrouille bis zur Hochsee — jede Schiffsklasse.",
+    "caption3": "Verdrängung, Gürtelpanzerung und Flugabwehrsysteme — abgeglichen."
+  },
+  "sidebar": {
+    "navLabel": "Nation und Fahrzeugkategorie",
+    "clearanceFiledUnder": "Akte abgelegt unter",
+    "selectPrompt": "Wähle links eine Nation, um ihre Akte zu öffnen."
+  },
+  "category": {
+    "aviation": "Luftwaffe",
+    "army": "Heer",
+    "fleet": "Marine",
+    "helicopters": "Hubschrauber"
+  },
+  "nation": {
+    "usa": "USA",
+    "germany": "Deutschland",
+    "ussr": "UdSSR",
+    "britain": "Großbritannien",
+    "japan": "Japan",
+    "china": "China",
+    "italy": "Italien",
+    "france": "Frankreich",
+    "sweden": "Schweden",
+    "israel": "Israel"
+  },
+  "grid": {
+    "recordsLoaded": "{loaded} / {total} geladen",
+    "noRecords": "Unter diesem Punkt sind keine Einträge erfasst.",
+    "pullingChunk": "Nächster Abschnitt wird aus dem Archiv geladen…",
+    "requestFailed": "Archivanfrage fehlgeschlagen",
+    "requestFailedDetail": "Die API-Route konnte nicht erreicht werden. Prüfe, ob der Entwicklungsserver läuft."
+  },
+  "modal": {
+    "close": "Akte schließen",
+    "rareAcquisition": "Seltener Erwerb",
+    "eventExclusive": "Event-exklusiv",
+    "arcade": "Arcade",
+    "realistic": "Realistisch",
+    "simulator": "Simulator",
+    "crew": "Besatzung",
+    "repairRb": "Reparatur {value} SL (RB)",
+    "slMultiplier": "SL-Multiplikator ×{value}",
+    "rpMultiplier": "RP-Multiplikator ×{value}",
+    "sectionMobility": "Mobilität",
+    "sectionFirepower": "Feuerkraft",
+    "sectionArmor": "Panzerung & Überlebensfähigkeit",
+    "sectionAvionics": "Avionik",
+    "sectionProTips": "Profi-Tipps",
+    "secA": "Abschn. A",
+    "secB": "Abschn. B",
+    "secC": "Abschn. C",
+    "secD": "Abschn. D",
+    "fieldNotes": "Feldnotizen",
+    "power": "Leistung",
+    "weight": "Gewicht",
+    "powerToWeight": "Leistungsgewicht",
+    "topSpeed": "Höchstgeschwindigkeit",
+    "reverse": "Rückwärtsgang",
+    "turnTime": "Wendezeit",
+    "climb": "Steigrate",
+    "transmission": "Getriebe",
+    "reloadBase": "Nachladezeit (Basis)",
+    "reloadAced": "Nachladezeit (Ass)",
+    "vertTraverse": "Vertikale Richtgeschwindigkeit",
+    "horizTraverse": "Horizontale Richtgeschwindigkeit",
+    "hullFront": "Wannenfront",
+    "hullSide": "Wannenseite",
+    "hullRear": "Wannenheck",
+    "turretFront": "Turmfront",
+    "turretSide": "Turmseite",
+    "turretRear": "Turmheck",
+    "era": "Reaktivpanzerung (ERA)",
+    "composite": "Verbundpanzerung",
+    "fitted": "Verbaut",
+    "none": "Keine",
+    "yes": "Ja",
+    "no": "Nein",
+    "radarRange": "Radarreichweite",
+    "thermal": "Wärmebild",
+    "genN": "Gen. {n}",
+    "rwr": "Radarwarner (RWR)",
+    "laserWarning": "Laserwarner",
+    "ballisticComputer": "Ballistikrechner"
+  },
+  "language": {
+    "label": "Sprache",
+    "translateToggle": "Fahrzeugdaten übersetzen",
+    "translating": "Wird übersetzt…",
+    "translateError": "Übersetzung nicht verfügbar — Originaltext wird angezeigt.",
+    "needsApiKey": "Kein API-Schlüssel für die Übersetzung konfiguriert."
+  }
+}

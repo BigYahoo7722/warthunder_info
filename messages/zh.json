@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "War Thunder Codex — 战地档案",
+    "description": "War Thunder 全载具名录的完整虚拟化参考手册。"
+  },
+  "header": {
+    "classified": "机密 — War Thunder Codex",
+    "cover": "封面"
+  },
+  "hero": {
+    "eyebrow1": "战地档案 · 诸兵种合成",
+    "title1": "每一具车体、机体与编号——均已归档。",
+    "caption1": "十个国家，超过 2,600 条记录已收录。",
+    "eyebrow2": "许可等级 · 顶级",
+    "title2": "八级机型，航电系统全面解密。",
+    "caption2": "雷达范围、热成像代数、雷达告警——均已存档。",
+    "eyebrow3": "附件 C · 舰船",
+    "title3": "从近海巡逻到远洋作战——涵盖每一船级。",
+    "caption3": "排水量、水线装甲与防空系统均已交叉核对。"
+  },
+  "sidebar": {
+    "navLabel": "国家与载具类别",
+    "clearanceFiledUnder": "档案归类于",
+    "selectPrompt": "点击左侧国家以打开其档案。"
+  },
+  "category": {
+    "aviation": "航空",
+    "army": "陆军",
+    "fleet": "舰船",
+    "helicopters": "直升机"
+  },
+  "nation": {
+    "usa": "美国",
+    "germany": "德国",
+    "ussr": "苏联",
+    "britain": "英国",
+    "japan": "日本",
+    "china": "中国",
+    "italy": "意大利",
+    "france": "法国",
+    "sweden": "瑞典",
+    "israel": "以色列"
+  },
+  "grid": {
+    "recordsLoaded": "已加载 {loaded} / {total}",
+    "noRecords": "此分类下暂无记录。",
+    "pullingChunk": "正在从档案库读取下一批数据…",
+    "requestFailed": "档案请求失败",
+    "requestFailedDetail": "无法连接到 API 路由，请确认开发服务器正在运行。"
+  },
+  "modal": {
+    "close": "关闭档案",
+    "rareAcquisition": "稀有获取",
+    "eventExclusive": "活动限定",
+    "arcade": "街机",
+    "realistic": "现实",
+    "simulator": "模拟",
+    "crew": "乘员",
+    "repairRb": "维修费 {value} SL（RB）",
+    "slMultiplier": "SL 倍率 ×{value}",
+    "rpMultiplier": "RP 倍率 ×{value}",
+    "sectionMobility": "机动性",
+    "sectionFirepower": "火力",
+    "sectionArmor": "装甲与生存性",
+    "sectionAvionics": "航电系统",
+    "sectionProTips": "高手心得",
+    "secA": "A 节",
+    "secB": "B 节",
+    "secC": "C 节",
+    "secD": "D 节",
+    "fieldNotes": "战地笔记",
+    "power": "功率",
+    "weight": "重量",
+    "powerToWeight": "功重比",
+    "topSpeed": "最高速度",
+    "reverse": "倒车速度",
+    "turnTime": "转向时间",
+    "climb": "爬升率",
+    "transmission": "变速箱",
+    "reloadBase": "装填时间（基础）",
+    "reloadAced": "装填时间（满编）",
+    "vertTraverse": "垂直转速",
+    "horizTraverse": "水平转速",
+    "hullFront": "车体正面",
+    "hullSide": "车体侧面",
+    "hullRear": "车体后部",
+    "turretFront": "炮塔正面",
+    "turretSide": "炮塔侧面",
+    "turretRear": "炮塔后部",
+    "era": "反应装甲（ERA）",
+    "composite": "复合装甲",
+    "fitted": "已装备",
+    "none": "无",
+    "yes": "是",
+    "no": "否",
+    "radarRange": "雷达范围",
+    "thermal": "热成像",
+    "genN": "第 {n} 代",
+    "rwr": "雷达告警装置（RWR）",
+    "laserWarning": "激光告警",
+    "ballisticComputer": "弹道计算机"
+  },
+  "language": {
+    "label": "语言",
+    "translateToggle": "翻译载具数据",
+    "translating": "翻译中…",
+    "translateError": "翻译不可用——显示原文。",
+    "needsApiKey": "未配置翻译 API 密钥。"
+  }
+}

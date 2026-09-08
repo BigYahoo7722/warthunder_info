@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "War Thunder Codex — Field Dossier",
+    "description": "A complete, virtualized reference for the War Thunder vehicle roster."
+  },
+  "header": {
+    "classified": "Classified — War Thunder Codex",
+    "cover": "Cover"
+  },
+  "hero": {
+    "eyebrow1": "Field Dossier · Combined Arms",
+    "title1": "Every hull, airframe & hull number — catalogued.",
+    "caption1": "2,600+ records indexed across ten nations.",
+    "eyebrow2": "Clearance Level · Top Tier",
+    "title2": "Rank VIII airframes, decoded to the avionics suite.",
+    "caption2": "Radar bands, thermal generation, RWR — on file.",
+    "eyebrow3": "Annex C · Fleet",
+    "title3": "Coastal patrol to blue-water — every hull class.",
+    "caption3": "Displacement, belt armor, AA suites cross-referenced."
+  },
+  "sidebar": {
+    "navLabel": "Nation and vehicle category",
+    "clearanceFiledUnder": "Clearance filed under",
+    "selectPrompt": "Select a nation on the left to open its file."
+  },
+  "category": {
+    "aviation": "Aviation",
+    "army": "Army",
+    "fleet": "Fleet",
+    "helicopters": "Helicopters"
+  },
+  "nation": {
+    "usa": "USA",
+    "germany": "Germany",
+    "ussr": "USSR",
+    "britain": "Britain",
+    "japan": "Japan",
+    "china": "China",
+    "italy": "Italy",
+    "france": "France",
+    "sweden": "Sweden",
+    "israel": "Israel"
+  },
+  "grid": {
+    "recordsLoaded": "{loaded} / {total} loaded",
+    "noRecords": "No records filed under this heading.",
+    "pullingChunk": "Pulling next chunk from archive…",
+    "requestFailed": "Archive request failed",
+    "requestFailedDetail": "The API route couldn't be reached. Check that the dev server is running."
+  },
+  "modal": {
+    "close": "Close dossier",
+    "rareAcquisition": "Rare acquisition",
+    "eventExclusive": "Event exclusive",
+    "arcade": "Arcade",
+    "realistic": "Realistic",
+    "simulator": "Simulator",
+    "crew": "Crew",
+    "repairRb": "Repair {value} SL (RB)",
+    "slMultiplier": "SL ×{value}",
+    "rpMultiplier": "RP ×{value}",
+    "sectionMobility": "Mobility",
+    "sectionFirepower": "Firepower",
+    "sectionArmor": "Armor & survivability",
+    "sectionAvionics": "Avionics",
+    "sectionProTips": "Pro player tips",
+    "secA": "Sec. A",
+    "secB": "Sec. B",
+    "secC": "Sec. C",
+    "secD": "Sec. D",
+    "fieldNotes": "Field notes",
+    "power": "Power",
+    "weight": "Weight",
+    "powerToWeight": "Power/wt",
+    "topSpeed": "Top speed",
+    "reverse": "Reverse",
+    "turnTime": "Turn time",
+    "climb": "Climb",
+    "transmission": "Transmission",
+    "reloadBase": "Reload (base)",
+    "reloadAced": "Reload (aced)",
+    "vertTraverse": "Vert. traverse",
+    "horizTraverse": "Horiz. traverse",
+    "hullFront": "Hull front",
+    "hullSide": "Hull side",
+    "hullRear": "Hull rear",
+    "turretFront": "Turret front",
+    "turretSide": "Turret side",
+    "turretRear": "Turret rear",
+    "era": "ERA",
+    "composite": "Composite",
+    "fitted": "Fitted",
+    "none": "None",
+    "yes": "Yes",
+    "no": "No",
+    "radarRange": "Radar range",
+    "thermal": "Thermal",
+    "genN": "Gen {n}",
+    "rwr": "RWR",
+    "laserWarning": "Laser warning",
+    "ballisticComputer": "Ballistic computer"
+  },
+  "language": {
+    "label": "Language",
+    "translateToggle": "Translate vehicle data",
+    "translating": "Translating…",
+    "translateError": "Translation unavailable — showing original text.",
+    "needsApiKey": "Translation API key not configured."
+  }
+}

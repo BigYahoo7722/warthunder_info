@@ -1,0 +1,110 @@
+{
+  "meta": {
+    "title": "War Thunder Codex — Dossiê de Campo",
+    "description": "Uma referência completa e virtualizada para toda a frota de veículos do War Thunder."
+  },
+  "header": {
+    "classified": "Confidencial — War Thunder Codex",
+    "cover": "Capa"
+  },
+  "hero": {
+    "eyebrow1": "Dossiê de Campo · Armas Combinadas",
+    "title1": "Cada casco, aeronave e número de série — catalogado.",
+    "caption1": "Mais de 2.600 registros indexados em dez nações.",
+    "eyebrow2": "Nível de Acesso · Elite",
+    "title2": "Aeronaves de patente VIII, decodificadas até a suíte de aviônica.",
+    "caption2": "Alcances de radar, geração térmica, RWR — no arquivo.",
+    "eyebrow3": "Anexo C · Frota",
+    "title3": "Da patrulha costeira ao mar aberto — cada classe de casco.",
+    "caption3": "Deslocamento, blindagem de cinturão e sistemas antiaéreos — referenciados."
+  },
+  "sidebar": {
+    "navLabel": "Nação e categoria de veículo",
+    "clearanceFiledUnder": "Dossiê arquivado sob",
+    "selectPrompt": "Selecione uma nação à esquerda para abrir seu dossiê."
+  },
+  "category": {
+    "aviation": "Aviação",
+    "army": "Exército",
+    "fleet": "Frota",
+    "helicopters": "Helicópteros"
+  },
+  "nation": {
+    "usa": "EUA",
+    "germany": "Alemanha",
+    "ussr": "URSS",
+    "britain": "Grã-Bretanha",
+    "japan": "Japão",
+    "china": "China",
+    "italy": "Itália",
+    "france": "França",
+    "sweden": "Suécia",
+    "israel": "Israel"
+  },
+  "grid": {
+    "recordsLoaded": "{loaded} / {total} carregados",
+    "noRecords": "Nenhum registro arquivado sob este título.",
+    "pullingChunk": "Buscando o próximo lote do arquivo…",
+    "requestFailed": "Falha na solicitação ao arquivo",
+    "requestFailedDetail": "Não foi possível acessar a rota da API. Verifique se o servidor de desenvolvimento está em execução."
+  },
+  "modal": {
+    "close": "Fechar dossiê",
+    "rareAcquisition": "Aquisição rara",
+    "eventExclusive": "Exclusivo de evento",
+    "arcade": "Arcade",
+    "realistic": "Realista",
+    "simulator": "Simulador",
+    "crew": "Tripulação",
+    "repairRb": "Reparo {value} SL (RB)",
+    "slMultiplier": "Multiplicador SL ×{value}",
+    "rpMultiplier": "Multiplicador RP ×{value}",
+    "sectionMobility": "Mobilidade",
+    "sectionFirepower": "Poder de fogo",
+    "sectionArmor": "Blindagem e sobrevivência",
+    "sectionAvionics": "Aviônica",
+    "sectionProTips": "Dicas de profissionais",
+    "secA": "Seç. A",
+    "secB": "Seç. B",
+    "secC": "Seç. C",
+    "secD": "Seç. D",
+    "fieldNotes": "Notas de campo",
+    "power": "Potência",
+    "weight": "Peso",
+    "powerToWeight": "Potência/peso",
+    "topSpeed": "Velocidade máxima",
+    "reverse": "Marcha à ré",
+    "turnTime": "Tempo de giro",
+    "climb": "Taxa de subida",
+    "transmission": "Transmissão",
+    "reloadBase": "Recarga (base)",
+    "reloadAced": "Recarga (ás)",
+    "vertTraverse": "Mira vertical",
+    "horizTraverse": "Mira horizontal",
+    "hullFront": "Casco frontal",
+    "hullSide": "Casco lateral",
+    "hullRear": "Casco traseiro",
+    "turretFront": "Torre frontal",
+    "turretSide": "Torre lateral",
+    "turretRear": "Torre traseira",
+    "era": "Blindagem reativa (ERA)",
+    "composite": "Blindagem composta",
+    "fitted": "Instalada",
+    "none": "Nenhuma",
+    "yes": "Sim",
+    "no": "Não",
+    "radarRange": "Alcance do radar",
+    "thermal": "Térmico",
+    "genN": "Ger. {n}",
+    "rwr": "Detector de radar (RWR)",
+    "laserWarning": "Alerta a laser",
+    "ballisticComputer": "Computador balístico"
+  },
+  "language": {
+    "label": "Idioma",
+    "translateToggle": "Traduzir dados do veículo",
+    "translating": "Traduzindo…",
+    "translateError": "Tradução indisponível — mostrando texto original.",
+    "needsApiKey": "Chave de API de tradução não configurada."
+  }
+}
