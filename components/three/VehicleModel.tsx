@@ -1,6 +1,8 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import * as THREE from "three";
+import { useGLTF } from "@react-three/drei";
 import type { MutableRefObject } from "react";
 import type { Category } from "@/lib/types";
 
@@ -22,188 +24,185 @@ export interface ModelRefs {
   setAux: (el: THREE.Object3D | null, i: number) => void;
 }
 
-// Livery accents per nation so the placeholder geometry doesn't look
-// identical for every vehicle — pulled from the same nation the card/modal
-// already show, not invented per-vehicle.
-const NATION_TINT: Record<string, string> = {
-  usa: "#4a5a45",
-  germany: "#4a5940",
-  ussr: "#4a4238",
-  britain: "#3f4a3a",
-  japan: "#48493a",
-  china: "#4a4230",
-  italy: "#454a3d",
-  france: "#3d4a42",
-  sweden: "#3a4048",
-  israel: "#4a4438",
+// public/models/<folder>/scene.gltf — CC-BY-4.0 Sketchfab downloads, see
+// CREDITS.md for the required attribution text for each.
+const MODEL_PATH: Record<Category, string> = {
+  army: "/models/tank/scene.gltf",
+  aviation: "/models/jet/scene.gltf",
+  helicopters: "/models/helicopter/scene.gltf",
+  fleet: "/models/ship/scene.gltf",
 };
 
 export function VehicleModel({
   category,
-  nation,
+  nation: _nation, // kept in the prop contract for CinematicHero/VehicleRevealScene callers; real models carry their own livery now instead of a per-nation procedural tint
   refs,
 }: {
   category: Category;
   nation: string;
   refs: ModelRefs;
 }) {
-  const tint = NATION_TINT[nation] ?? "#454a3d";
-
   switch (category) {
     case "aviation":
-      return <JetModel tint={tint} refs={refs} />;
+      return <JetModel refs={refs} />;
     case "helicopters":
-      return <HeliModel tint={tint} refs={refs} />;
+      return <HeliModel refs={refs} />;
     case "fleet":
-      return <ShipModel tint={tint} refs={refs} />;
+      return <ShipModel refs={refs} />;
     case "army":
     default:
-      return <TankModel tint={tint} refs={refs} />;
+      return <TankModel refs={refs} />;
   }
 }
 
-function TankModel({ tint, refs }: { tint: string; refs: ModelRefs }) {
+/**
+ * Reparents a light or empty into a node that's part of an already-loaded
+ * GLTF scene graph (e.g. a rig bone), so it inherits that node's animated
+ * world transform automatically — used for the muzzle flash light, which
+ * needs to move with the barrel/turret/rotor mount as it recoils.
+ */
+function reparent(child: THREE.Object3D | null, parent: THREE.Object3D | null | undefined) {
+  if (child && parent && child.parent !== parent) parent.add(child);
+}
+
+// ---------------------------------------------------------------------
+// Tank — Low Poly T-72, Game Ready (Mr. The Rich, CC-BY-4.0)
+// Real rig: Main_01 -> ... -> All_06 -> { Turret_07 -> Barrel_08 ->
+// BulletSpawn_09, Wheel.L.1-6, Wheel.R.1-6, ... }. BulletSpawn_09 is a
+// literal bullet-spawn bone the original rigger placed at the barrel tip.
+// ---------------------------------------------------------------------
+function TankModel({ refs }: { refs: ModelRefs }) {
+  const { scene } = useGLTF("/models/tank/scene.gltf") as unknown as { scene: THREE.Group };
+  const cloned = useMemo(() => scene.clone(true), [scene]);
+  const n = useMemo(() => {
+    const map: Record<string, THREE.Object3D> = {};
+    cloned.traverse((o) => { if (o.name) map[o.name] = o; });
+    return map;
+  }, [cloned]);
+
+  useEffect(() => {
+    refs.hull.current = (n["Main_01"] as THREE.Group) ?? cloned;
+    refs.articulated.current = (n["Turret_07"] as THREE.Group) ?? cloned;
+    refs.emitter.current = n["BulletSpawn_09"] ?? cloned;
+    reparent(refs.muzzleLight.current, refs.emitter.current);
+
+    const wheelNames = [
+      "Wheel.L.1_012", "Wheel.L.2_011", "Wheel.L.3_013", "Wheel.L.4_00", "Wheel.L.5_014", "Wheel.L.6_015",
+      "Wheel.R.1_017", "Wheel.R.2_016", "Wheel.R.3_018", "Wheel.R.4_019", "Wheel.R.5_020", "Wheel.R.6_021",
+    ];
+    wheelNames.forEach((name, i) => refs.setAux(n[name] ?? null, i));
+  }, [n, cloned, refs]);
+
   return (
-    <group ref={refs.hull}>
-      <mesh castShadow receiveShadow position={[0, 0.55, 0]}>
-        <boxGeometry args={[3.4, 0.7, 1.9]} />
-        <meshStandardMaterial color={tint} roughness={0.75} metalness={0.35} />
-      </mesh>
-      {[-1.3, -0.6, 0.1, 0.8, 1.4].map((x, i) => (
-        <group key={i} ref={(el) => refs.setAux(el, i)} position={[x, 0.35, 1.05]}>
-          <mesh castShadow>
-            <cylinderGeometry args={[0.35, 0.35, 0.25, 16]} />
-            <meshStandardMaterial color="#111" roughness={0.9} />
-          </mesh>
-        </group>
-      ))}
-      <group ref={refs.articulated} position={[0.1, 1.05, 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[1.5, 0.55, 1.4]} />
-          <meshStandardMaterial color={tint} roughness={0.7} metalness={0.4} />
-        </mesh>
-        <mesh ref={refs.emitter as any} castShadow position={[1.7, 0.05, 0]}>
-          <cylinderGeometry args={[0.09, 0.09, 2.6, 12]} />
-          <meshStandardMaterial color="#22261f" roughness={0.5} metalness={0.6} />
-          <pointLight ref={refs.muzzleLight} position={[1.3, 0, 0]} intensity={0} distance={6} color="#ffb35c" />
-        </mesh>
+    <>
+      <primitive object={cloned} scale={0.9} />
+      <pointLight ref={refs.muzzleLight} intensity={0} distance={6} color="#ffb35c" />
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------
+// Jet — Modern Jet Fighter Low Poly Game Ready Free (Hdjusj, CC-BY-4.0)
+// Single fused mesh, no separate rig — treated as one rigid body. The
+// missile emitter is a plain empty we add ourselves at the wingtip,
+// since the source model has no dedicated hardpoint node.
+// ---------------------------------------------------------------------
+function JetModel({ refs }: { refs: ModelRefs }) {
+  const { scene } = useGLTF("/models/jet/scene.gltf") as unknown as { scene: THREE.Group };
+  const cloned = useMemo(() => scene.clone(true), [scene]);
+
+  useEffect(() => {
+    refs.hull.current = cloned;
+    refs.articulated.current = cloned; // no separate articulated part on a fused mesh — recoil moves the whole airframe, which reads fine for a missile launch kick
+  }, [cloned, refs]);
+
+  return (
+    <group>
+      <primitive object={cloned} scale={0.8} rotation={[0, Math.PI / 2, 0]} />
+      <group
+        ref={(el) => {
+          if (el) refs.emitter.current = el;
+        }}
+        position={[0.9, -0.3, 1.6]}
+      >
+        <pointLight ref={refs.muzzleLight} intensity={0} distance={5} color="#ff8a3d" />
       </group>
     </group>
   );
 }
 
-function JetModel({ tint, refs }: { tint: string; refs: ModelRefs }) {
-  return (
-    <group ref={refs.hull}>
-      <group ref={refs.articulated}>
-        {/* fuselage */}
-        <mesh castShadow receiveShadow rotation={[0, 0, 0]}>
-          <capsuleGeometry args={[0.32, 3.2, 6, 12]} />
-          <meshStandardMaterial color={tint} roughness={0.35} metalness={0.75} />
-        </mesh>
-        {/* wings */}
-        <mesh castShadow position={[0, 0, 0]}>
-          <boxGeometry args={[0.12, 0.05, 3.4]} />
-          <meshStandardMaterial color={tint} roughness={0.4} metalness={0.7} />
-        </mesh>
-        {/* tailfin */}
-        <mesh castShadow position={[-1.5, 0.35, 0]}>
-          <boxGeometry args={[0.5, 0.7, 0.08]} />
-          <meshStandardMaterial color={tint} roughness={0.4} metalness={0.7} />
-        </mesh>
-        {/* engine glow (afterburner) */}
-        <mesh position={[-1.75, 0, 0]}>
-          <circleGeometry args={[0.22, 16]} rotation={[0, Math.PI / 2, 0]} />
-          <meshBasicMaterial color="#7fd0ff" toneMapped={false} />
-        </mesh>
-        {/* wingtip rail — missile emitter */}
-        <group ref={refs.emitter as any} position={[0.3, -0.15, 1.6]}>
-          <mesh castShadow>
-            <boxGeometry args={[0.7, 0.1, 0.1]} />
-            <meshStandardMaterial color="#333" metalness={0.8} />
-          </mesh>
-          <pointLight ref={refs.muzzleLight} intensity={0} distance={5} color="#ff8a3d" />
-        </group>
-      </group>
-    </group>
-  );
-}
+// ---------------------------------------------------------------------
+// Helicopter — Rigged Helicopter (nikhilmohan, CC-BY-4.0)
+// Real rig: Empty_heli -> { Empty -> baling-baling_2 (main rotor, 2
+// mesh parts), Empty_baling_1 -> "baling baling_1" (tail rotor, 2 mesh
+// parts), body_helicopter }. Note the tail rotor node's name has a
+// literal space in it ("baling baling_1"), copied verbatim from the
+// source file — not a typo introduced here.
+// ---------------------------------------------------------------------
+function HeliModel({ refs }: { refs: ModelRefs }) {
+  const { scene } = useGLTF("/models/helicopter/scene.gltf") as unknown as { scene: THREE.Group };
+  const cloned = useMemo(() => scene.clone(true), [scene]);
+  const n = useMemo(() => {
+    const map: Record<string, THREE.Object3D> = {};
+    cloned.traverse((o) => { if (o.name) map[o.name] = o; });
+    return map;
+  }, [cloned]);
 
-function HeliModel({ tint, refs }: { tint: string; refs: ModelRefs }) {
+  useEffect(() => {
+    refs.hull.current = (n["Empty_heli"] as THREE.Group) ?? cloned;
+    refs.articulated.current = (n["Empty"] as THREE.Group) ?? cloned; // main rotor mount
+    refs.setAux(n["baling-baling_2"] ?? null, 0); // main rotor
+    refs.setAux(n["baling baling_1"] ?? null, 1); // tail rotor
+  }, [n, cloned, refs]);
+
   return (
-    <group ref={refs.hull}>
-      {/* cabin + tail boom */}
-      <mesh castShadow receiveShadow position={[0, 0.7, 0]}>
-        <sphereGeometry args={[0.6, 16, 12]} />
-        <meshStandardMaterial color={tint} roughness={0.4} metalness={0.6} />
-      </mesh>
-      <mesh castShadow position={[-1.6, 0.85, 0]}>
-        <cylinderGeometry args={[0.08, 0.16, 2.2, 10]} rotation={[0, 0, Math.PI / 2]} />
-        <meshStandardMaterial color={tint} roughness={0.4} metalness={0.6} />
-      </mesh>
-      {/* main rotor mast (articulated) + blades (aux[0]) */}
-      <group ref={refs.articulated} position={[0, 1.35, 0]}>
-        <mesh castShadow>
-          <cylinderGeometry args={[0.06, 0.06, 0.3, 8]} />
-          <meshStandardMaterial color="#222" />
-        </mesh>
-        <group ref={(el) => refs.setAux(el, 0)}>
-          <mesh castShadow position={[0, 0.15, 0]}>
-            <boxGeometry args={[4.2, 0.05, 0.18]} />
-            <meshStandardMaterial color="#1a1a1a" />
-          </mesh>
-          <mesh castShadow position={[0, 0.15, 0]} rotation={[0, Math.PI / 2, 0]}>
-            <boxGeometry args={[4.2, 0.05, 0.18]} />
-            <meshStandardMaterial color="#1a1a1a" />
-          </mesh>
-        </group>
-      </group>
-      {/* tail rotor (aux[1]) */}
-      <group ref={(el) => refs.setAux(el, 1)} position={[-2.6, 0.9, 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[0.05, 0.9, 0.1]} />
-          <meshStandardMaterial color="#1a1a1a" />
-        </mesh>
-      </group>
-      {/* door gun / rocket pod emitter */}
-      <group ref={refs.emitter as any} position={[0.7, 0.5, 0.6]}>
-        <mesh castShadow>
-          <cylinderGeometry args={[0.08, 0.08, 0.5, 8]} rotation={[Math.PI / 2, 0, 0]} />
-          <meshStandardMaterial color="#333" metalness={0.7} />
-        </mesh>
+    <group>
+      <primitive object={cloned} scale={0.7} />
+      <group
+        ref={(el) => {
+          if (el) refs.emitter.current = el;
+          reparent(refs.muzzleLight.current, el);
+        }}
+        position={[0.7, 0.5, 0.6]}
+      >
         <pointLight ref={refs.muzzleLight} intensity={0} distance={5} color="#ffb35c" />
       </group>
     </group>
   );
 }
 
-function ShipModel({ tint, refs }: { tint: string; refs: ModelRefs }) {
+// ---------------------------------------------------------------------
+// Ship — Low poly battleship (minehffd, CC-BY-4.0)
+// Source file has no semantically-named turret node (just generic
+// Cube.NNN / Cylinder.NNN from the FBX->glTF export) so, like the jet,
+// this is treated as one rigid hull with a manually-placed bow emitter
+// rather than guessing which anonymous cylinder is the main gun.
+// ---------------------------------------------------------------------
+function ShipModel({ refs }: { refs: ModelRefs }) {
+  const { scene } = useGLTF("/models/ship/scene.gltf") as unknown as { scene: THREE.Group };
+  const cloned = useMemo(() => scene.clone(true), [scene]);
+
+  useEffect(() => {
+    refs.hull.current = cloned;
+    refs.articulated.current = cloned;
+  }, [cloned, refs]);
+
   return (
-    <group ref={refs.hull}>
-      {/* hull */}
-      <mesh castShadow receiveShadow position={[0, 0.4, 0]}>
-        <boxGeometry args={[5.5, 0.8, 1.3]} />
-        <meshStandardMaterial color={tint} roughness={0.6} metalness={0.5} />
-      </mesh>
-      {/* superstructure */}
-      <mesh castShadow position={[-0.6, 1.1, 0]}>
-        <boxGeometry args={[1.3, 1.0, 1.0]} />
-        <meshStandardMaterial color={tint} roughness={0.6} metalness={0.5} />
-      </mesh>
-      {/* main turret (articulated) with twin barrels (emitter) */}
-      <group ref={refs.articulated} position={[1.6, 0.85, 0]}>
-        <mesh castShadow>
-          <boxGeometry args={[0.9, 0.45, 0.9]} />
-          <meshStandardMaterial color={tint} roughness={0.55} metalness={0.55} />
-        </mesh>
-        <group ref={refs.emitter as any} position={[1.1, 0, 0.18]}>
-          <mesh castShadow>
-            <cylinderGeometry args={[0.06, 0.06, 1.8, 10]} rotation={[0, 0, Math.PI / 2]} />
-            <meshStandardMaterial color="#22261f" metalness={0.6} />
-          </mesh>
-          <pointLight ref={refs.muzzleLight} intensity={0} distance={7} color="#ffb35c" />
-        </group>
+    <group>
+      <primitive object={cloned} scale={0.35} />
+      <group
+        ref={(el) => {
+          if (el) refs.emitter.current = el;
+        }}
+        position={[2.4, 0.8, 0]}
+      >
+        <pointLight ref={refs.muzzleLight} intensity={0} distance={7} color="#ffb35c" />
       </group>
     </group>
   );
 }
+
+useGLTF.preload("/models/tank/scene.gltf");
+useGLTF.preload("/models/jet/scene.gltf");
+useGLTF.preload("/models/helicopter/scene.gltf");
+useGLTF.preload("/models/ship/scene.gltf");
