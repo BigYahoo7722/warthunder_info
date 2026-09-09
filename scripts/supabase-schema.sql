@@ -22,6 +22,13 @@ create table if not exists vehicles (
   dynamic_specs     jsonb,                 -- raw label->value scrape of the wiki's infobox/specs table
   research_cost_rp  numeric,
   purchase_cost_sl  numeric,
+  -- FIX: this column was missing from this file even though
+  -- scripts/daily_scraper.py has written it on every upsert since the
+  -- very first version (v["imageUrl"] -> "image_url") and the live
+  -- database has real values in it. A fresh install run from this file
+  -- alone would have had upsert_vehicles() fail on every single batch
+  -- the moment it tried to write a column that didn't exist yet.
+  image_url         text,
   source_url        text,
   scraped_at        timestamptz,
   updated_at        timestamptz default now()
