@@ -102,6 +102,17 @@ export default function Home() {
             )}
           </main>
         </div>
+
+        <footer className="shrink-0 border-t border-hairline/70 bg-panel/50 px-4 py-1.5 text-center backdrop-blur-md">
+          <a
+            href="https://github.com/BigYahoo7722/warthunder_info/blob/main/CREDITS.md"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-mono text-[9px] uppercase tracking-widest2 text-parchment/30 hover:text-brass"
+          >
+            3D models: CC-BY-4.0, see credits
+          </a>
+        </footer>
       </div>
 
       <VehicleDossierModal
